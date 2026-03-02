@@ -1,7 +1,8 @@
+# UChicago Harris School brand colors
 [theme]
-primaryColor = "#1E3A5F"
+primaryColor = "#800000"
 backgroundColor = "#FFFFFF"
-secondaryBackgroundColor = "#F5F7FA"
+secondaryBackgroundColor = "#F0EEEA"
 textColor = "#1A1A1A"
 font = "sans serif"
 

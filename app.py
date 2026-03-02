@@ -78,32 +78,38 @@ if "round3_done" not in st.session_state:
     st.session_state.round3_done = False
 
 st.set_page_config(
-    page_title="Proposal Evaluation",
+    page_title="HPIC — Deliberative Committee",
     page_icon="📋",
     layout="wide",
     initial_sidebar_state="expanded",
 )
 
-# Harris School of Public Policy / HPIC Challenge banner
+# UChicago Harris brand colors (maroon primary, grays)
+HARRIS_MAROON = "#800000"
+HARRIS_MAROON_DARK = "#600000"
+HARRIS_GRAY_DARK = "#767676"
+HARRIS_GRAY_LIGHT = "#D6D6CE"
+
+# Harris School banner + accent styling
 st.markdown(
-    """
+    f"""
     <div style="
-        background: linear-gradient(90deg, #1a365d 0%, #2c5282 100%);
+        background: linear-gradient(90deg, {HARRIS_MAROON_DARK} 0%, {HARRIS_MAROON} 50%, {HARRIS_MAROON_DARK} 100%);
         color: white;
-        padding: 0.85rem 1.25rem;
-        margin-bottom: 1.25rem;
+        padding: 0.9rem 1.5rem;
+        margin-bottom: 1rem;
         border-radius: 8px;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.12);
+        box-shadow: 0 2px 8px rgba(0,0,0,0.15);
     ">
         <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem;">
-            <span style="font-size: 1.15rem; font-weight: 700; letter-spacing: 0.02em;">
+            <span style="font-size: 1.2rem; font-weight: 700; letter-spacing: 0.03em;">
                 Harris School of Public Policy
             </span>
             <span style="
                 font-size: 0.9rem;
                 font-weight: 600;
-                background: rgba(255,255,255,0.2);
-                padding: 0.3rem 0.8rem;
+                background: rgba(255,255,255,0.25);
+                padding: 0.35rem 0.9rem;
                 border-radius: 9999px;
             ">
                 HPIC Challenge
@@ -124,7 +130,40 @@ proposals_dir = root / "proposals"
 outputs_dir = root / "outputs"
 outputs_dir.mkdir(parents=True, exist_ok=True)
 
-# Sidebar: proposal source and mode
+# Tabs: Home (landing) and Evaluate
+tab_home, tab_evaluate = st.tabs(["Home", "Evaluate proposal"])
+
+with tab_home:
+    st.markdown("### The idea")
+    st.markdown(
+        "This tool supports **deliberative evaluation** of Chicago stadium and urban policy proposals. "
+        "An AI panel of expert and community personas scores and discusses a proposal across three criteria: "
+        "**Impact**, **Fiscal Responsibility**, and **Sustainability**. The process mirrors a multi-round committee: "
+        "individual scoring, deliberation on each other’s views, then final votes and a short consensus report."
+    )
+    st.markdown("---")
+    st.markdown("### Procedure")
+    st.markdown(
+        "1. **Upload or select** a proposal (PDF or Markdown) in the **Evaluate proposal** tab.  \n"
+        "2. **Choose a mode**: 4 experts (quick), 7 experts, or full (community stakeholders first, then jury).  \n"
+        "3. **Run rounds** one at a time (Round 1 → Round 2 → Round 3) to see results after each step, or **Run all rounds** in one go.  \n"
+        "4. **Review** scores, deliberation, and the synthesis report; download the report and log from the results section."
+    )
+    st.markdown("---")
+    st.markdown("### Rounds")
+    st.markdown(
+        """
+        | Round | What happens |
+        |-------|----------------|
+        | **Round 1 — Individual scoring** | Each panelist scores Impact, Fiscal Responsibility, and Sustainability (1–10) and gives a short justification. In full mode, the jury also sees a summary of community reactions. |
+        | **Round 2 — Deliberation** | Each panelist sees everyone’s Round 1 scores and responds in character: agreement, disagreement, pushback, or emphasis. |
+        | **Round 3 — Final vote** | Each panelist gives final scores and a two-sentence verdict. A final **synthesis** step produces a short consensus report (strengths, weaknesses, conditions for recommendation). |
+        """
+    )
+    st.markdown("")
+    st.info("Go to the **Evaluate proposal** tab to upload a proposal and run the deliberation.")
+
+# Sidebar: proposal source and mode (used by Evaluate tab)
 st.sidebar.header("Input")
 proposal_source = st.sidebar.radio(
     "Proposal source",
@@ -185,203 +224,204 @@ st.sidebar.caption(
     "Decision-support tool. Not a substitute for public process or elected governance."
 )
 
-# Main: require proposal and API
-if not proposal_text:
-    st.info("Upload a proposal or select one from the sidebar to get started.")
-    st.stop()
+with tab_evaluate:
+    # Main: require proposal and API
+    if not proposal_text:
+        st.info("Upload a proposal or select one from the sidebar to get started.")
+        st.stop()
 
-if not _check_api_configured():
-    st.stop()
+    if not _check_api_configured():
+        st.stop()
 
-st.subheader("Proposal")
-st.caption(f"Using: {proposal_name} · Mode: {mode_key}")
-with st.expander("View proposal text (excerpt)", expanded=False):
-    st.text(proposal_text[:8000] + ("..." if len(proposal_text) > 8000 else ""))
+    st.subheader("Proposal")
+    st.caption(f"Using: {proposal_name} · Mode: {mode_key}")
+    with st.expander("View proposal text (excerpt)", expanded=False):
+        st.text(proposal_text[:8000] + ("..." if len(proposal_text) > 8000 else ""))
 
-# ---- Step-through: Round 1 / Round 2 / Round 3 ----
-st.markdown("---")
-st.subheader("Deliberation")
-
-st.caption("Run one round at a time to see results quickly, or run all rounds at once. Watch the terminal for progress (each agent logs when it starts and finishes).")
-
-col_r1, col_r2, col_r3, col_all = st.columns(4)
-
-with col_r1:
-    run_r1 = st.button("Run Round 1", type="primary", help="Individual scoring by each expert")
-with col_r2:
-    run_r2 = st.button("Run Round 2", disabled=not st.session_state.round1_done, help="Deliberation: react to each other's scores")
-with col_r3:
-    run_r3 = st.button("Run Round 3", disabled=not st.session_state.round2_done, help="Final scores, verdicts, and synthesis")
-with col_all:
-    run_all = st.button("Run all rounds", help="Run Round 1, 2, and 3 in one go (takes longer)")
-
-if st.session_state.run_in_progress:
-    st.warning("A run is already in progress. Please wait.")
-    run_r1 = run_r2 = run_r3 = run_all = False
-
-def _clear_rounds_after_r1():
-    st.session_state.round2_done = False
-    st.session_state.round3_done = False
-
-if run_r1 and proposal_text:
-    st.session_state.run_in_progress = True
-    try:
-        progress = st.progress(0, text="Round 1 — Loading jurors…")
-        jury_personas = load_jury_personas(quick=(mode_key == "jury_quick"))
-        community_summary = ""
-        if mode_key == "full":
-            progress.progress(20, text="Community phase…")
-            community_summary = get_community_summary(proposal_text)
-            st.session_state.community_summary = community_summary
-        progress.progress(40, text="Round 1 — Individual scoring…")
-        round1_scores, log_entries, out_dir = run_round1(
-            proposal_text, community_summary, jury_personas
-        )
-        st.session_state.run_dir = out_dir
-        st.session_state.round1_scores = round1_scores
-        st.session_state.log_entries = log_entries
-        st.session_state.jury_personas = jury_personas
-        st.session_state.round1_done = True
-        _clear_rounds_after_r1()
-        progress.progress(100, text="Round 1 done.")
-        st.success(f"Round 1 complete. Outputs in `{out_dir.name}`.")
-    except Exception as e:
-        st.error(f"Round 1 failed: {e}")
-    finally:
-        st.session_state.run_in_progress = False
-        st.rerun()
-
-if run_r2 and st.session_state.round1_done and st.session_state.log_entries is not None and st.session_state.jury_personas is not None:
-    st.session_state.run_in_progress = True
-    try:
-        progress = st.progress(0, text="Round 2 — Deliberation…")
-        log_entries = run_round2(
-            st.session_state.jury_personas,
-            st.session_state.log_entries,
-            Path(st.session_state.run_dir),
-        )
-        st.session_state.log_entries = log_entries
-        st.session_state.round2_done = True
-        st.session_state.round3_done = False
-        progress.progress(100, text="Round 2 done.")
-        st.success("Round 2 complete.")
-    except Exception as e:
-        st.error(f"Round 2 failed: {e}")
-    finally:
-        st.session_state.run_in_progress = False
-        st.rerun()
-
-if run_r3 and st.session_state.round2_done and st.session_state.log_entries is not None and st.session_state.jury_personas is not None and st.session_state.round1_scores is not None:
-    st.session_state.run_in_progress = True
-    try:
-        progress = st.progress(0, text="Round 3 — Final vote & synthesis…")
-        run_round3(
-            st.session_state.jury_personas,
-            st.session_state.log_entries,
-            st.session_state.round1_scores,
-            Path(st.session_state.run_dir),
-        )
-        st.session_state.round3_done = True
-        progress.progress(100, text="Done.")
-        st.success("Round 3 and synthesis complete.")
-    except Exception as e:
-        st.error(f"Round 3 failed: {e}")
-    finally:
-        st.session_state.run_in_progress = False
-        st.rerun()
-
-if run_all and proposal_text:
-    st.session_state.run_in_progress = True
-    try:
-        progress = st.progress(0, text="Running all rounds… (see terminal for progress)")
-        out_dir = run(proposal_text, mode=mode_key, output_dir=None)
-        st.session_state.run_dir = out_dir
-        st.session_state.round1_done = True
-        st.session_state.round2_done = True
-        st.session_state.round3_done = True
-        # Load written outputs into state for display (run() writes scores.json, not round1_scores.json)
-        if (out_dir / "scores.json").exists():
-            data = json.loads((out_dir / "scores.json").read_text())
-            st.session_state.round1_scores = data.get("round1", [])
-        st.session_state.log_entries = []
-        progress.progress(100, text="Done.")
-        st.success(f"All rounds complete. Outputs in `{out_dir.name}`.")
-    except Exception as e:
-        st.error(f"Run failed: {e}")
-    finally:
-        st.session_state.run_in_progress = False
-        st.rerun()
-
-# ---- Per-round summary (scrollable) ----
-run_dir = st.session_state.run_dir
-if run_dir is not None:
-    run_dir = Path(run_dir)
-
-if run_dir and run_dir.is_dir():
+    # ---- Step-through: Round 1 / Round 2 / Round 3 ----
     st.markdown("---")
-    st.subheader("Results (by round)")
+    st.subheader("Deliberation")
 
-    # Round 1
-    if st.session_state.round1_done and st.session_state.round1_scores:
-        with st.expander("Round 1 — Individual scoring", expanded=True):
-            rows = st.session_state.round1_scores
-            for r in rows:
-                name = r.get("name", r.get("agent_id", "?"))
-                st.markdown(f"**{name}** — Impact: {r.get('impact', '—')}/10 · Fiscal: {r.get('fiscal', '—')}/10 · Sustainability: {r.get('sustainability', '—')}/10")
-                if r.get("justification"):
-                    st.caption(r["justification"][:400] + ("…" if len(r.get("justification", "")) > 400 else ""))
-                st.markdown("")
-            if (run_dir / "round1_log.md").exists():
-                with st.expander("Full Round 1 log", expanded=False):
-                    st.markdown((run_dir / "round1_log.md").read_text(encoding="utf-8"))
+    st.caption("Run one round at a time to see results quickly, or run all rounds at once. Watch the terminal for progress (each agent logs when it starts and finishes).")
 
-    # Round 2
-    if st.session_state.round2_done:
-        with st.expander("Round 2 — Deliberation", expanded=True):
-            if (run_dir / "round2_log.md").exists():
-                st.markdown((run_dir / "round2_log.md").read_text(encoding="utf-8"))
-            else:
-                r2_entries = [e for e in (st.session_state.log_entries or []) if e.get("round") == "Round 2 — Deliberation"]
-                for e in r2_entries:
-                    st.markdown(f"**{e.get('agent_id', '?')}**")
-                    st.markdown(e.get("content", "")[:800])
-                    st.markdown("")
+    col_r1, col_r2, col_r3, col_all = st.columns(4)
 
-    # Round 3 + Synthesis + Full report
-    if st.session_state.round3_done:
-        with st.expander("Round 3 — Final vote & synthesis", expanded=True):
-            report_path = run_dir / "report.md"
-            if report_path.exists():
-                st.markdown(report_path.read_text(encoding="utf-8"))
-        with st.expander("Full deliberation log", expanded=False):
-            log_path = run_dir / "deliberation_log.md"
-            if log_path.exists():
-                st.markdown(log_path.read_text(encoding="utf-8"))
-        col1, col2 = st.columns(2)
-        with col1:
-            st.download_button(
-                "Download report (Markdown)",
-                data=(run_dir / "report.md").read_text(encoding="utf-8") if (run_dir / "report.md").exists() else "",
-                file_name="report.md",
-                mime="text/markdown",
-                key="dl_report",
+    with col_r1:
+        run_r1 = st.button("Run Round 1", type="primary", help="Individual scoring by each expert")
+    with col_r2:
+        run_r2 = st.button("Run Round 2", disabled=not st.session_state.round1_done, help="Deliberation: react to each other's scores")
+    with col_r3:
+        run_r3 = st.button("Run Round 3", disabled=not st.session_state.round2_done, help="Final scores, verdicts, and synthesis")
+    with col_all:
+        run_all = st.button("Run all rounds", help="Run Round 1, 2, and 3 in one go (takes longer)")
+
+    if st.session_state.run_in_progress:
+        st.warning("A run is already in progress. Please wait.")
+        run_r1 = run_r2 = run_r3 = run_all = False
+
+    def _clear_rounds_after_r1():
+        st.session_state.round2_done = False
+        st.session_state.round3_done = False
+
+    if run_r1 and proposal_text:
+        st.session_state.run_in_progress = True
+        try:
+            progress = st.progress(0, text="Round 1 — Loading jurors…")
+            jury_personas = load_jury_personas(quick=(mode_key == "jury_quick"))
+            community_summary = ""
+            if mode_key == "full":
+                progress.progress(20, text="Community phase…")
+                community_summary = get_community_summary(proposal_text)
+                st.session_state.community_summary = community_summary
+            progress.progress(40, text="Round 1 — Individual scoring…")
+            round1_scores, log_entries, out_dir = run_round1(
+                proposal_text, community_summary, jury_personas
             )
-        with col2:
-            if (run_dir / "deliberation_log.md").exists():
-                st.download_button(
-                    "Download deliberation log (Markdown)",
-                    data=(run_dir / "deliberation_log.md").read_text(encoding="utf-8"),
-                    file_name="deliberation_log.md",
-                    mime="text/markdown",
-                    key="dl_log",
-                )
+            st.session_state.run_dir = out_dir
+            st.session_state.round1_scores = round1_scores
+            st.session_state.log_entries = log_entries
+            st.session_state.jury_personas = jury_personas
+            st.session_state.round1_done = True
+            _clear_rounds_after_r1()
+            progress.progress(100, text="Round 1 done.")
+            st.success(f"Round 1 complete. Outputs in `{out_dir.name}`.")
+        except Exception as e:
+            st.error(f"Round 1 failed: {e}")
+        finally:
+            st.session_state.run_in_progress = False
+            st.rerun()
 
-# Backward compat: if they had last_run_dir from before, show it (legacy single run)
-if not run_dir and st.session_state.get("last_run_dir") and Path(st.session_state.last_run_dir).is_dir():
-    out_dir = Path(st.session_state.last_run_dir)
-    st.subheader("Results")
-    if (out_dir / "report.md").exists():
-        st.markdown((out_dir / "report.md").read_text(encoding="utf-8"))
-    with st.expander("Full deliberation log", expanded=False):
-        if (out_dir / "deliberation_log.md").exists():
-            st.markdown((out_dir / "deliberation_log.md").read_text(encoding="utf-8"))
+    if run_r2 and st.session_state.round1_done and st.session_state.log_entries is not None and st.session_state.jury_personas is not None:
+        st.session_state.run_in_progress = True
+        try:
+            progress = st.progress(0, text="Round 2 — Deliberation…")
+            log_entries = run_round2(
+                st.session_state.jury_personas,
+                st.session_state.log_entries,
+                Path(st.session_state.run_dir),
+            )
+            st.session_state.log_entries = log_entries
+            st.session_state.round2_done = True
+            st.session_state.round3_done = False
+            progress.progress(100, text="Round 2 done.")
+            st.success("Round 2 complete.")
+        except Exception as e:
+            st.error(f"Round 2 failed: {e}")
+        finally:
+            st.session_state.run_in_progress = False
+            st.rerun()
+
+    if run_r3 and st.session_state.round2_done and st.session_state.log_entries is not None and st.session_state.jury_personas is not None and st.session_state.round1_scores is not None:
+        st.session_state.run_in_progress = True
+        try:
+            progress = st.progress(0, text="Round 3 — Final vote & synthesis…")
+            run_round3(
+                st.session_state.jury_personas,
+                st.session_state.log_entries,
+                st.session_state.round1_scores,
+                Path(st.session_state.run_dir),
+            )
+            st.session_state.round3_done = True
+            progress.progress(100, text="Done.")
+            st.success("Round 3 and synthesis complete.")
+        except Exception as e:
+            st.error(f"Round 3 failed: {e}")
+        finally:
+            st.session_state.run_in_progress = False
+            st.rerun()
+
+    if run_all and proposal_text:
+        st.session_state.run_in_progress = True
+        try:
+            progress = st.progress(0, text="Running all rounds… (see terminal for progress)")
+            out_dir = run(proposal_text, mode=mode_key, output_dir=None)
+            st.session_state.run_dir = out_dir
+            st.session_state.round1_done = True
+            st.session_state.round2_done = True
+            st.session_state.round3_done = True
+            # Load written outputs into state for display
+            if (out_dir / "scores.json").exists():
+                data = json.loads((out_dir / "scores.json").read_text())
+                st.session_state.round1_scores = data.get("round1", [])
+            st.session_state.log_entries = []
+            progress.progress(100, text="Done.")
+            st.success(f"All rounds complete. Outputs in `{out_dir.name}`.")
+        except Exception as e:
+            st.error(f"Run failed: {e}")
+        finally:
+            st.session_state.run_in_progress = False
+            st.rerun()
+
+    # ---- Per-round summary (scrollable) ----
+    run_dir = st.session_state.run_dir
+    if run_dir is not None:
+        run_dir = Path(run_dir)
+
+    if run_dir and run_dir.is_dir():
+        st.markdown("---")
+        st.subheader("Results (by round)")
+
+        # Round 1
+        if st.session_state.round1_done and st.session_state.round1_scores:
+            with st.expander("Round 1 — Individual scoring", expanded=True):
+                rows = st.session_state.round1_scores
+                for r in rows:
+                    name = r.get("name", r.get("agent_id", "?"))
+                    st.markdown(f"**{name}** — Impact: {r.get('impact', '—')}/10 · Fiscal: {r.get('fiscal', '—')}/10 · Sustainability: {r.get('sustainability', '—')}/10")
+                    if r.get("justification"):
+                        st.caption(r["justification"][:400] + ("…" if len(r.get("justification", "")) > 400 else ""))
+                    st.markdown("")
+                if (run_dir / "round1_log.md").exists():
+                    with st.expander("Full Round 1 log", expanded=False):
+                        st.markdown((run_dir / "round1_log.md").read_text(encoding="utf-8"))
+
+        # Round 2
+        if st.session_state.round2_done:
+            with st.expander("Round 2 — Deliberation", expanded=True):
+                if (run_dir / "round2_log.md").exists():
+                    st.markdown((run_dir / "round2_log.md").read_text(encoding="utf-8"))
+                else:
+                    r2_entries = [e for e in (st.session_state.log_entries or []) if e.get("round") == "Round 2 — Deliberation"]
+                    for e in r2_entries:
+                        st.markdown(f"**{e.get('agent_id', '?')}**")
+                        st.markdown(e.get("content", "")[:800])
+                        st.markdown("")
+
+        # Round 3 + Synthesis + Full report
+        if st.session_state.round3_done:
+            with st.expander("Round 3 — Final vote & synthesis", expanded=True):
+                report_path = run_dir / "report.md"
+                if report_path.exists():
+                    st.markdown(report_path.read_text(encoding="utf-8"))
+            with st.expander("Full deliberation log", expanded=False):
+                log_path = run_dir / "deliberation_log.md"
+                if log_path.exists():
+                    st.markdown(log_path.read_text(encoding="utf-8"))
+            col1, col2 = st.columns(2)
+            with col1:
+                st.download_button(
+                    "Download report (Markdown)",
+                    data=(run_dir / "report.md").read_text(encoding="utf-8") if (run_dir / "report.md").exists() else "",
+                    file_name="report.md",
+                    mime="text/markdown",
+                    key="dl_report",
+                )
+            with col2:
+                if (run_dir / "deliberation_log.md").exists():
+                    st.download_button(
+                        "Download deliberation log (Markdown)",
+                        data=(run_dir / "deliberation_log.md").read_text(encoding="utf-8"),
+                        file_name="deliberation_log.md",
+                        mime="text/markdown",
+                        key="dl_log",
+                    )
+
+    # Backward compat: if they had last_run_dir from before, show it (legacy single run)
+    if not run_dir and st.session_state.get("last_run_dir") and Path(st.session_state.last_run_dir).is_dir():
+        out_dir = Path(st.session_state.last_run_dir)
+        st.subheader("Results")
+        if (out_dir / "report.md").exists():
+            st.markdown((out_dir / "report.md").read_text(encoding="utf-8"))
+        with st.expander("Full deliberation log", expanded=False):
+            if (out_dir / "deliberation_log.md").exists():
+                st.markdown((out_dir / "deliberation_log.md").read_text(encoding="utf-8"))
