@@ -22,8 +22,33 @@ uv run streamlit run app.py
 CLI:
 
 ```bash
-uv run python -m src.simulate --proposal proposals/draft.md [--mode jury|full] [--output-dir dir]
+uv run python -m src.simulate --proposal proposals/draft.md [--mode jury|jury_quick|full] [--output-dir dir]
 ```
+
+## Committee architecture and deliberation process
+
+**Modes**
+
+- **Jury only (4 experts — quick):** Four curated panelists (fiscal, political, community/equity, urban economics). Fastest option.
+- **Jury only (7 experts):** Full expert panel from `agents/jury/`.
+- **Full (community + jury):** Community stakeholders react first; their summary is then given to the jury.
+
+**Rounds**
+
+1. **Round 1 — Individual scoring**  
+   Each jury member scores the proposal on Impact, Fiscal Responsibility, and Sustainability (1–10) with a short justification. Optionally informed by a community reactions summary (full mode).
+
+2. **Round 2 — Deliberation**  
+   Each panelist sees Round 1 scores and justifications and responds in character: agreement, disagreement, pushback, or emphasis.
+
+3. **Round 3 — Final vote**  
+   Each panelist gives final scores and a two-sentence verdict. A final **synthesis** call produces a short consensus report (strengths, weaknesses, conditions for recommendation).
+
+In the app you can run **one round at a time** (see results after each) or **Run all rounds** in one go. Outputs (scores, deliberation log, report) are written to `outputs/<run_id>/`.
+
+**Proposal length**
+
+The app loads the full proposal (PDF or .md) up to 500,000 characters. When calling the API, the **jury sees the first 120,000 characters** of the proposal in Round 1; the **community phase** uses the first 60,000 characters. Very long documents are therefore evaluated on a leading excerpt; the rest is not sent to the model.
 
 ## Environment
 
