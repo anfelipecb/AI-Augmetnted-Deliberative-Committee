@@ -22,7 +22,6 @@ from src.config import ANTHROPIC_API_KEY, MAX_UPLOAD_BYTES
 from src.personas import load_jury_personas
 from src.proposal_loader import ProposalLoadError, load_proposal, load_proposal_from_bytes
 from src.simulate import (
-    get_community_summary,
     run,
     run_round1,
     run_round2,
@@ -266,16 +265,11 @@ with tab_evaluate:
     if run_r1 and proposal_text:
         st.session_state.run_in_progress = True
         try:
-            progress = st.progress(0, text="Round 1 — Loading jurors…")
+            progress = st.progress(0, text="Round 1 — Document summary (Opus)…")
             jury_personas = load_jury_personas(quick=(mode_key == "jury_quick"))
-            community_summary = ""
-            if mode_key == "full":
-                progress.progress(20, text="Community phase…")
-                community_summary = get_community_summary(proposal_text)
-                st.session_state.community_summary = community_summary
-            progress.progress(40, text="Round 1 — Individual scoring…")
+            progress.progress(30, text="Round 1 — Individual scoring…")
             round1_scores, log_entries, out_dir = run_round1(
-                proposal_text, community_summary, jury_personas
+                proposal_text, jury_personas, mode=mode_key
             )
             st.session_state.run_dir = out_dir
             st.session_state.round1_scores = round1_scores

@@ -5,7 +5,11 @@ import logging
 from anthropic import Anthropic
 from anthropic import AuthenticationError, NotFoundError
 
-from src.config import ANTHROPIC_API_KEY, CLAUDE_MODEL
+from src.config import (
+    ANTHROPIC_API_KEY,
+    DELIBERATION_MODEL,
+    SUMMARIZER_MODEL,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -16,6 +20,35 @@ Evaluate the proposal on these three criteria (score each 1-10 with justificatio
 - **Fiscal Responsibility**: Does it generate new tax revenues and job creation? Are public subsidies and/or debt justified? Are there accountability measures and long-term fiscal sustainability?
 - **Sustainability**: Is the design sustainable and adaptive? Does it support a mix of uses beyond sports? Does it integrate environmental best practices and evolve with trends?
 """
+
+
+SUMMARIZER_SYSTEM = """You are an expert analyst. Produce a highly detailed summary of the Chicago stadium/urban policy proposal you receive.
+
+Capture: key content, narrative, data from tables, figures, projections, and any quantitative or qualitative claims. The summary will be used by an expert panel to evaluate the proposal on Impact, Fiscal Responsibility, and Sustainability. Be thorough and preserve important details."""
+
+
+def summarize_proposal(proposal_text: str) -> str:
+    """
+    Use Opus to produce a highly detailed summary of the proposal.
+    The summary is persisted and used by all deliberation agents (Haiku).
+    """
+    if not ANTHROPIC_API_KEY:
+        raise RuntimeError(
+            "API configuration is missing. Set ANTHROPIC_API_KEY in `.env`."
+        )
+    client = Anthropic(api_key=ANTHROPIC_API_KEY)
+    text = proposal_text[:200_000]  # Stay within context
+    try:
+        response = client.messages.create(
+            model=SUMMARIZER_MODEL,
+            max_tokens=8192,
+            system=SUMMARIZER_SYSTEM,
+            messages=[{"role": "user", "content": f"Summarize this proposal in detail:\n\n{text}"}],
+        )
+        return response.content[0].text if response.content else ""
+    except Exception as e:
+        logger.exception("Summarizer failed: %s", type(e).__name__)
+        raise RuntimeError("Could not summarize proposal. Try again.") from e
 
 
 def build_jury_system_prompt(persona_content: str) -> str:
@@ -41,6 +74,7 @@ def invoke_agent(
     system_prompt: str,
     user_message: str,
     conversation_history: list[dict[str, str]] | None = None,
+    model: str | None = None,
 ) -> str:
     """
     Call Claude with the given system prompt and user message.
@@ -70,9 +104,10 @@ def invoke_agent(
             if role in ("user", "assistant") and content:
                 messages.append({"role": role, "content": content})
     messages.append({"role": "user", "content": user_message})
+    model_to_use = model or DELIBERATION_MODEL
     try:
         response = client.messages.create(
-            model=CLAUDE_MODEL,
+            model=model_to_use,
             max_tokens=4096,
             system=system_prompt,
             messages=messages,
@@ -82,10 +117,10 @@ def invoke_agent(
         logger.error(
             "API call failed: NotFoundError (404). agent_id=%s model=%s",
             agent_id,
-            CLAUDE_MODEL,
+            model_to_use,
         )
         raise RuntimeError(
-            "API returned 404. Check CLAUDE_MODEL is valid for your account."
+            "API returned 404. Check DELIBERATION_MODEL is valid for your account."
         ) from e
     except AuthenticationError as e:
         logger.error("API call failed: AuthenticationError (401). agent_id=%s", agent_id)
@@ -97,7 +132,7 @@ def invoke_agent(
             "API call failed: %s. agent_id=%s model=%s",
             type(e).__name__,
             agent_id,
-            CLAUDE_MODEL,
+            model_to_use,
         )
         raise RuntimeError(
             "Evaluation could not be completed. Try again or check your proposal."

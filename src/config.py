@@ -14,7 +14,15 @@ if not (_PROJECT_ROOT / "pyproject.toml").exists():
 
 # Anthropic API (direct)
 ANTHROPIC_API_KEY: str | None = (os.environ.get("ANTHROPIC_API_KEY") or "").strip() or None
-CLAUDE_MODEL: str = (os.environ.get("CLAUDE_MODEL") or "").strip() or "claude-opus-4-6"
+
+# Two-tier: Opus for document understanding, Haiku for deliberation
+SUMMARIZER_MODEL: str = (
+    (os.environ.get("SUMMARIZER_MODEL") or "").strip() or "claude-opus-4-6"
+)
+DELIBERATION_MODEL: str = (
+    (os.environ.get("DELIBERATION_MODEL") or "").strip() or "claude-3-5-haiku-latest"
+)
+CLAUDE_MODEL: str = (os.environ.get("CLAUDE_MODEL") or "").strip() or DELIBERATION_MODEL
 
 AGENTS_JURY_DIR: Path = _PROJECT_ROOT / "agents" / "jury"
 AGENTS_COMMUNITY_DIR: Path = _PROJECT_ROOT / "agents" / "community"

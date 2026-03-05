@@ -28,6 +28,7 @@ from src.agents import (
     build_community_system_prompt,
     build_jury_system_prompt,
     invoke_agent,
+    summarize_proposal,
 )
 from src.config import OUTPUTS_DIR
 from src.output import (
@@ -70,6 +71,14 @@ def _parse_scores_from_text(text: str) -> dict[str, int | str]:
     return out
 
 
+def _run_summarizer(proposal_text: str, out_dir: Path) -> str:
+    """Run Opus summarizer, persist to proposal_summary.md, return summary."""
+    _log_phase("Starting: Document summary (Opus)")
+    summary = summarize_proposal(proposal_text)
+    (out_dir / "proposal_summary.md").write_text(summary, encoding="utf-8")
+    return summary
+
+
 def _run_round1_jury(
     proposal_text: str, community_summary: str, jury_personas: list
 ) -> tuple[list, list]:
@@ -83,9 +92,9 @@ def _run_round1_jury(
     community_block = ""
     if community_summary:
         community_block = f"Community reactions summary:\n---\n{community_summary[:8000]}\n\n"
-    prompt = f"""Below is a Chicago stadium/urban policy proposal to evaluate. {intro}
+    prompt = f"""Below is a detailed summary of a Chicago stadium/urban policy proposal to evaluate. {intro}
 
-Proposal:
+Proposal summary:
 ---
 {proposal_text[:120000]}
 ---
@@ -256,14 +265,14 @@ Write a short consensus report (4-6 sentences): key strengths of the proposal, k
         return "Synthesis could not be generated."
 
 
-def _run_community_phase(proposal_text: str, community_personas: list) -> str:
+def _run_community_phase(proposal_summary: str, community_personas: list) -> str:
     """Run community agents and return a summary for the jury."""
     logger.info("Starting phase: Community (%d agents)", len(community_personas))
-    prompt = f"""Below is a Chicago stadium/urban policy proposal. React from your perspective: What changes for you? What worries you? What excites you? Be concrete.
+    prompt = f"""Below is a detailed summary of a Chicago stadium/urban policy proposal. React from your perspective: What changes for you? What worries you? What excites you? Be concrete.
 
-Proposal (excerpt):
+Proposal summary:
 ---
-{proposal_text[:60000]}
+{proposal_summary[:60000]}
 ---
 """
     parts: list[str] = []
@@ -280,22 +289,15 @@ Proposal (excerpt):
     return "\n\n".join(parts)
 
 
-def get_community_summary(proposal_text: str) -> str:
-    """Run community phase and return summary (for full mode). Use before run_round1."""
-    community_personas = load_community_personas()
-    if not community_personas:
-        return ""
-    return _run_community_phase(proposal_text, community_personas)
-
-
 def run_round1(
     proposal_text: str,
-    community_summary: str,
     jury_personas: list,
     output_dir: Path | None = None,
+    mode: str = "jury",
 ) -> tuple[list, list, Path]:
     """
-    Run Round 1 only: individual scoring. Creates output_dir, writes round1 files.
+    Run Round 1 only: summarizer (Opus), optional community (Haiku), then individual scoring (Haiku).
+    Creates output_dir, writes proposal_summary.md and round1 files.
     Returns (round1_scores, log_entries, out_dir).
     """
     out = output_dir or (OUTPUTS_DIR / f"{datetime.now().strftime('%Y%m%d_%H%M%S')}_run")
@@ -306,8 +308,15 @@ def run_round1(
     src_logger = logging.getLogger("src")
     src_logger.addHandler(file_handler)
     try:
+        proposal_summary = _run_summarizer(proposal_text, out)
+        community_summary = ""
+        if mode == "full":
+            community_personas = load_community_personas()
+            if community_personas:
+                community_summary = _run_community_phase(proposal_summary, community_personas)
+                (out / "community_summary.md").write_text(community_summary, encoding="utf-8")
         round1_scores, log_entries = _run_round1_jury(
-            proposal_text, community_summary, jury_personas
+            proposal_summary, community_summary, jury_personas
         )
         (out / "round1_scores.json").write_text(
             json.dumps({"round1": round1_scores}, indent=2), encoding="utf-8"
@@ -405,14 +414,15 @@ def run(
     src_logger = logging.getLogger("src")
     src_logger.addHandler(file_handler)
     try:
+        proposal_summary = _run_summarizer(proposal_text, out)
         jury_personas = load_jury_personas(quick=(mode == "jury_quick"))
         community_personas = load_community_personas() if mode == "full" else []
         community_summary = ""
         if mode == "full" and community_personas:
-            community_summary = _run_community_phase(proposal_text, community_personas)
+            community_summary = _run_community_phase(proposal_summary, community_personas)
             (out / "community_summary.md").write_text(community_summary, encoding="utf-8")
         round1_scores, log_entries = _run_round1_jury(
-            proposal_text, community_summary, jury_personas
+            proposal_summary, community_summary, jury_personas
         )
         (out / "round1_scores.json").write_text(
             json.dumps({"round1": round1_scores}, indent=2), encoding="utf-8"
