@@ -20,7 +20,7 @@ SUMMARIZER_MODEL: str = (
     (os.environ.get("SUMMARIZER_MODEL") or "").strip() or "claude-opus-4-6"
 )
 DELIBERATION_MODEL: str = (
-    (os.environ.get("DELIBERATION_MODEL") or "").strip() or "claude-3-5-haiku-latest"
+    (os.environ.get("DELIBERATION_MODEL") or "").strip() or "claude-haiku-4-5"
 )
 CLAUDE_MODEL: str = (os.environ.get("CLAUDE_MODEL") or "").strip() or DELIBERATION_MODEL
 

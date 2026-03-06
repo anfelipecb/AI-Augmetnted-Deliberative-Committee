@@ -95,7 +95,7 @@ The app loads the full proposal (PDF or .md) up to 500,000 characters. **Step 0 
 
 - `ANTHROPIC_API_KEY` — from [Anthropic Console](https://console.anthropic.com/). Required.
 - `SUMMARIZER_MODEL` (optional) — default `claude-opus-4-6`. Used for document understanding.
-- `DELIBERATION_MODEL` (optional) — default `claude-3-5-haiku-latest`. Used for community, jury, and synthesis.
+- `DELIBERATION_MODEL` (optional) — default `claude-haiku-4-5`. Used for community, jury, and synthesis.
 
 Never commit `.env`. Secrets are never sent to the browser or shown in the UI.
 
