@@ -10,6 +10,7 @@ from src.config import (
     DELIBERATION_MODEL,
     SUMMARIZER_MODEL,
 )
+from src.criteria import CRITERIA_LABELS, CRITERIA_SUB
 
 logger = logging.getLogger(__name__)
 
@@ -20,6 +21,26 @@ Evaluate the proposal on these three criteria (score each 1-10 with justificatio
 - **Fiscal Responsibility**: Does it generate new tax revenues and job creation? Are public subsidies and/or debt justified? Are there accountability measures and long-term fiscal sustainability?
 - **Sustainability**: Is the design sustainable and adaptive? Does it support a mix of uses beyond sports? Does it integrate environmental best practices and evolve with trends?
 """
+
+CRITERIA_6_TEXT = """
+Additionally assess the proposal on these six criteria, each as LOW, MEDIUM, or HIGH:
+
+- **Fiscal Impact** ({sub_fiscal_impact})
+- **Equity & Access** ({sub_equity_access})
+- **Political Feasibility** ({sub_political_feasibility})
+- **Sustainability** ({sub_sustainability})
+- **Team Retention** ({sub_team_retention})
+- **Accountability** ({sub_accountability})
+
+When asked for structured scores, respond with valid JSON including a "criteria" object with keys: fiscal_impact, equity_access, political_feasibility, sustainability, team_retention, accountability; values must be exactly one of LOW, MEDIUM, HIGH.
+""".format(
+    sub_fiscal_impact=CRITERIA_SUB["fiscal_impact"],
+    sub_equity_access=CRITERIA_SUB["equity_access"],
+    sub_political_feasibility=CRITERIA_SUB["political_feasibility"],
+    sub_sustainability=CRITERIA_SUB["sustainability"],
+    sub_team_retention=CRITERIA_SUB["team_retention"],
+    sub_accountability=CRITERIA_SUB["accountability"],
+)
 
 
 SUMMARIZER_SYSTEM = """You are an expert analyst. Produce a highly detailed summary of the Chicago stadium/urban policy proposal you receive.
@@ -57,16 +78,18 @@ def build_jury_system_prompt(persona_content: str) -> str:
 {persona_content}
 
 You are evaluating the proposal against Chicago's stated criteria. {CRITERIA_TEXT}
+{CRITERIA_6_TEXT}
 
-Respond in character with your expertise and key questions in mind. Be concise yet substantive. Output structured responses when asked for scores (Impact, Fiscal Responsibility, Sustainability, each 1-10 plus short justification)."""
+Respond in character with your expertise and key questions in mind. When asked for scores, you must respond with only a single valid JSON object—no other text, markdown, or commentary before or after. The JSON must include "impact", "fiscal", "sustainability" (1-10), "justification" or "verdict", and "criteria" (object with fiscal_impact, equity_access, political_feasibility, sustainability, team_retention, accountability — each exactly LOW, MEDIUM, or HIGH)."""
 
 
 def build_community_system_prompt(persona_content: str) -> str:
     return f"""You are a community stakeholder reacting to a Chicago stadium/urban policy proposal. Stay in character.
 
 {persona_content}
+{CRITERIA_6_TEXT}
 
-React from lived experience: What changes for you? What worries you? What excites you? Be concrete and specific. Keep your response concise (2–4 paragraphs) yet substantive."""
+React from lived experience: What changes for you? What worries you? What excites you? Be concrete. When asked for structured output, respond with valid JSON only: "reactions" (string with your narrative) and "criteria" (object with fiscal_impact, equity_access, political_feasibility, sustainability, team_retention, accountability — each LOW, MEDIUM, or HIGH)."""
 
 
 def invoke_agent(

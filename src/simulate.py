@@ -31,6 +31,7 @@ from src.agents import (
     summarize_proposal,
 )
 from src.config import OUTPUTS_DIR
+from src.criteria import CRITERIA_6, VALID_LEVELS
 from src.output import (
     format_deliberation_log_md,
     format_report_md,
@@ -40,8 +41,23 @@ from src.personas import load_community_personas, load_jury_personas
 from src.proposal_loader import ProposalLoadError, load_proposal
 
 
+def _parse_criteria_from_obj(obj: dict) -> dict[str, str]:
+    """Extract criteria dict from parsed JSON; normalize keys and values to LOW/MEDIUM/HIGH."""
+    criteria: dict[str, str] = {}
+    raw = obj.get("criteria") or {}
+    if not isinstance(raw, dict):
+        return criteria
+    for key in CRITERIA_6:
+        val = raw.get(key)
+        if isinstance(val, str) and val.upper() in VALID_LEVELS:
+            criteria[key] = val.upper()
+        else:
+            criteria[key] = ""
+    return criteria
+
+
 def _parse_scores_from_text(text: str) -> dict[str, int | str]:
-    """Extract Impact, Fiscal, Sustainability (1-10) and justification/verdict from agent text."""
+    """Extract Impact, Fiscal, Sustainability (1-10) and justification/verdict from agent text (regex fallback)."""
     out: dict[str, int | str] = {}
     patterns = [
         (r"(?:impact|Impact)\s*[:\s]+\s*(\d+)", "impact"),
@@ -55,20 +71,46 @@ def _parse_scores_from_text(text: str) -> dict[str, int | str]:
                 out[key] = int(m.group(1))
             except ValueError:
                 pass
-    # Defaults if not found
     for k in ("impact", "fiscal", "sustainability"):
         if k not in out:
             out[k] = 0
-    # Verdict: last 1-2 sentences or a line starting with Verdict
     verdict_m = re.search(r"(?:Verdict|verdict)\s*[:\s]+(.+?)(?=\n\n|\Z)", text, re.S | re.I)
     if verdict_m:
         out["verdict"] = verdict_m.group(1).strip()[:500]
     else:
         sentences = re.findall(r"[^.!?]+[.!?]", text)
         out["verdict"] = " ".join(sentences[-2:]).strip()[:500] if sentences else ""
-    # Justification: block of text before verdict or first 400 chars
     out["justification"] = text[:400].strip() if text else ""
     return out
+
+
+def _parse_scores_from_response(response: str, for_round3: bool = False) -> dict:
+    """Parse jury response: try JSON first (with criteria), then regex fallback. Returns dict with impact, fiscal, sustainability, justification/verdict, criteria."""
+    out: dict = {}
+    # Try to extract JSON block (model might wrap in markdown)
+    text_stripped = response.strip()
+    json_match = re.search(r"\{[\s\S]*\}", text_stripped)
+    if json_match:
+        try:
+            data = json.loads(json_match.group(0))
+            if isinstance(data, dict):
+                out["impact"] = int(data.get("impact", 0)) if _is_int(data.get("impact")) else 0
+                out["fiscal"] = int(data.get("fiscal", 0)) if _is_int(data.get("fiscal")) else 0
+                out["sustainability"] = int(data.get("sustainability", 0)) if _is_int(data.get("sustainability")) else 0
+                out["justification"] = str(data.get("justification", ""))[:500]
+                out["verdict"] = str(data.get("verdict", ""))[:500]
+                out["criteria"] = _parse_criteria_from_obj(data)
+                return out
+        except (json.JSONDecodeError, TypeError):
+            pass
+    parsed = _parse_scores_from_text(response)
+    out.update(parsed)
+    out["criteria"] = _parse_criteria_from_obj({})
+    return out
+
+
+def _is_int(x) -> bool:
+    return isinstance(x, int) or (isinstance(x, str) and x.isdigit())
 
 
 def _run_summarizer(proposal_text: str, out_dir: Path) -> str:
@@ -102,12 +144,16 @@ Proposal summary:
 {community_block}
 ---
 
-Score the proposal on each criterion (1-10) and give a short justification. Use this format so we can parse it:
+Score the proposal.
 
-Impact: [1-10]
-Fiscal Responsibility: [1-10]
-Sustainability: [1-10]
-Justification: [2-4 sentences]
+You must respond with only a single JSON object. Do not include any other text, markdown, or commentary before or after the JSON.
+
+Include in the JSON:
+- "impact", "fiscal", "sustainability": each 1-10
+- "justification": 2-4 sentences
+- "criteria": object with keys fiscal_impact, equity_access, political_feasibility, sustainability, team_retention, accountability — each value exactly "LOW", "MEDIUM", or "HIGH"
+
+Example: {{"impact": 7, "fiscal": 6, "sustainability": 8, "justification": "...", "criteria": {{"fiscal_impact": "HIGH", "equity_access": "MEDIUM", "political_feasibility": "LOW", "sustainability": "HIGH", "team_retention": "MEDIUM", "accountability": "HIGH"}}}}
 """
     log_entries: list[dict] = []
     score_rows: list[dict] = []
@@ -128,7 +174,7 @@ Justification: [2-4 sentences]
                 "content": response,
             }
         )
-        parsed = _parse_scores_from_text(response)
+        parsed = _parse_scores_from_response(response, for_round3=False)
         score_rows.append(
             {
                 "agent_id": persona["id"],
@@ -137,6 +183,7 @@ Justification: [2-4 sentences]
                 "fiscal": parsed.get("fiscal", 0),
                 "sustainability": parsed.get("sustainability", 0),
                 "justification": parsed.get("justification", response[:400]),
+                "criteria": parsed.get("criteria", {}),
             }
         )
     return score_rows, log_entries
@@ -187,8 +234,9 @@ Respond in character: react to your colleagues' scores and reasoning. Do you agr
 def _run_round3_final(
     jury_personas: list,
     deliberation_log_entries: list[dict],
+    round1_scores: list[dict] | None = None,
 ) -> tuple[list[dict], str]:
-    """Round 3: final scores and verdicts; then synthesize."""
+    """Round 3: final scores and verdicts; then synthesize. If Round 3 criteria are empty, fall back to Round 1 criteria."""
     logger.info("Starting phase: Round 3 — Final vote (%d jury agents)", len(jury_personas))
     transcript = "\n\n".join(
         f"**{e['agent_id']}** ({e['round']}): {e['content'][:1200]}"
@@ -200,13 +248,18 @@ def _run_round3_final(
 
 ---
 
-Give your **final** scores (you may revise from Round 1) and a 2-sentence verdict. Use this format:
+Give your **final** scores and a 2-sentence verdict.
 
-Impact: [1-10]
-Fiscal Responsibility: [1-10]
-Sustainability: [1-10]
-Verdict: [Exactly 2 sentences.]
+You must respond with only a single JSON object. Do not include any other text, markdown, or commentary before or after the JSON.
+
+Include in the JSON:
+- "impact", "fiscal", "sustainability": each 1-10
+- "verdict": exactly 2 sentences
+- "criteria": object with keys fiscal_impact, equity_access, political_feasibility, sustainability, team_retention, accountability — each value exactly "LOW", "MEDIUM", or "HIGH"
+
+Example format: {{"impact": 6, "fiscal": 8, "sustainability": 7, "verdict": "Your two sentences here.", "criteria": {{"fiscal_impact": "HIGH", "equity_access": "MEDIUM", "political_feasibility": "LOW", "sustainability": "MEDIUM", "team_retention": "HIGH", "accountability": "MEDIUM"}}}}
 """
+    r1_by_id = {r["agent_id"]: r for r in (round1_scores or [])} if round1_scores else {}
     final_rows: list[dict] = []
     log_entries = list(deliberation_log_entries)
     for persona in jury_personas:
@@ -226,7 +279,10 @@ Verdict: [Exactly 2 sentences.]
                 "content": response,
             }
         )
-        parsed = _parse_scores_from_text(response)
+        parsed = _parse_scores_from_response(response, for_round3=True)
+        criteria = parsed.get("criteria") or {}
+        if not any((criteria.get(k) or "").strip() for k in CRITERIA_6) and persona["id"] in r1_by_id:
+            criteria = (r1_by_id[persona["id"]].get("criteria") or {}).copy()
         final_rows.append(
             {
                 "agent_id": persona["id"],
@@ -235,6 +291,7 @@ Verdict: [Exactly 2 sentences.]
                 "fiscal": parsed.get("fiscal", 0),
                 "sustainability": parsed.get("sustainability", 0),
                 "verdict": parsed.get("verdict", response[:300]),
+                "criteria": criteria,
             }
         )
     # Synthesis: one more call to produce consensus report
@@ -265,8 +322,24 @@ Write a short consensus report (4-6 sentences): key strengths of the proposal, k
         return "Synthesis could not be generated."
 
 
-def _run_community_phase(proposal_summary: str, community_personas: list) -> str:
-    """Run community agents and return a summary for the jury."""
+def _parse_community_response(response: str) -> tuple[str, dict[str, str]]:
+    """Extract reactions and criteria from community JSON. Returns (reactions_text, criteria_dict)."""
+    criteria: dict[str, str] = {}
+    reactions = response[:2000].strip()
+    json_match = re.search(r"\{[\s\S]*\}", response.strip())
+    if json_match:
+        try:
+            data = json.loads(json_match.group(0))
+            if isinstance(data, dict):
+                reactions = str(data.get("reactions", reactions))[:2000]
+                criteria = _parse_criteria_from_obj(data)
+        except (json.JSONDecodeError, TypeError):
+            pass
+    return reactions, criteria
+
+
+def _run_community_phase(proposal_summary: str, community_personas: list) -> tuple[str, list[dict]]:
+    """Run community agents. Returns (summary_str for jury, list of {agent_id, name, reactions, criteria})."""
     logger.info("Starting phase: Community (%d agents)", len(community_personas))
     prompt = f"""Below is a detailed summary of a Chicago stadium/urban policy proposal. React from your perspective: What changes for you? What worries you? What excites you? Be concrete.
 
@@ -274,8 +347,13 @@ Proposal summary:
 ---
 {proposal_summary[:60000]}
 ---
+
+Respond with a single JSON object only (no other text). Include:
+- "reactions": your narrative (2-4 paragraphs)
+- "criteria": object with keys fiscal_impact, equity_access, political_feasibility, sustainability, team_retention, accountability — each value exactly "LOW", "MEDIUM", or "HIGH"
 """
     parts: list[str] = []
+    community_scores: list[dict] = []
     for persona in community_personas:
         _log_phase(f"Invoking community agent: {persona['id']}")
         sys_prompt = build_community_system_prompt(persona["content"])
@@ -285,8 +363,15 @@ Proposal summary:
             response = "No response."
         _log_phase(f"Agent {persona['id']} done")
         time.sleep(API_DELAY_SECONDS)
-        parts.append(f"**{persona['name']}** ({persona['id']}): {response}")
-    return "\n\n".join(parts)
+        reactions, criteria = _parse_community_response(response)
+        parts.append(f"**{persona['name']}** ({persona['id']}): {reactions}")
+        community_scores.append({
+            "agent_id": persona["id"],
+            "name": persona["name"],
+            "reactions": reactions,
+            "criteria": criteria,
+        })
+    return "\n\n".join(parts), community_scores
 
 
 def run_round1(
@@ -313,8 +398,11 @@ def run_round1(
         if mode == "full":
             community_personas = load_community_personas()
             if community_personas:
-                community_summary = _run_community_phase(proposal_summary, community_personas)
+                community_summary, community_scores = _run_community_phase(proposal_summary, community_personas)
                 (out / "community_summary.md").write_text(community_summary, encoding="utf-8")
+                (out / "community_scores.json").write_text(
+                    json.dumps({"community_scores": community_scores}, indent=2), encoding="utf-8"
+                )
         round1_scores, log_entries = _run_round1_jury(
             proposal_summary, community_summary, jury_personas
         )
@@ -371,14 +459,21 @@ def run_round3(
     src_logger = logging.getLogger("src")
     src_logger.addHandler(file_handler)
     try:
-        final_scores, synthesis, full_log_entries = _run_round3_final(jury_personas, log_entries)
+        final_scores, synthesis, full_log_entries = _run_round3_final(jury_personas, log_entries, round1_scores)
         (out_dir / "deliberation_log.md").write_text(
             format_deliberation_log_md(full_log_entries), encoding="utf-8"
         )
         deliberation_preview = "\n\n".join(e["content"][:500] for e in full_log_entries)
         report_md = format_report_md(round1_scores, final_scores, synthesis, deliberation_preview)
         (out_dir / "report.md").write_text(report_md, encoding="utf-8")
-        scores_data = format_scores_json(round1_scores, final_scores)
+        community_scores_for_json: list[dict] = []
+        if (out_dir / "community_scores.json").exists():
+            try:
+                data = json.loads((out_dir / "community_scores.json").read_text(encoding="utf-8"))
+                community_scores_for_json = data.get("community_scores", [])
+            except (json.JSONDecodeError, OSError):
+                pass
+        scores_data = format_scores_json(round1_scores, final_scores, community_scores=community_scores_for_json)
         (out_dir / "scores.json").write_text(json.dumps(scores_data, indent=2), encoding="utf-8")
         return final_scores, synthesis
     finally:
@@ -418,9 +513,13 @@ def run(
         jury_personas = load_jury_personas(quick=(mode == "jury_quick"))
         community_personas = load_community_personas() if mode == "full" else []
         community_summary = ""
+        community_scores_run: list[dict] = []
         if mode == "full" and community_personas:
-            community_summary = _run_community_phase(proposal_summary, community_personas)
+            community_summary, community_scores_run = _run_community_phase(proposal_summary, community_personas)
             (out / "community_summary.md").write_text(community_summary, encoding="utf-8")
+            (out / "community_scores.json").write_text(
+                json.dumps({"community_scores": community_scores_run}, indent=2), encoding="utf-8"
+            )
         round1_scores, log_entries = _run_round1_jury(
             proposal_summary, community_summary, jury_personas
         )
@@ -436,7 +535,7 @@ def run(
             format_deliberation_log_md([e for e in log_entries if e.get("round") == "Round 2 — Deliberation"]),
             encoding="utf-8",
         )
-        final_scores, synthesis, log_entries = _run_round3_final(jury_personas, log_entries)
+        final_scores, synthesis, log_entries = _run_round3_final(jury_personas, log_entries, round1_scores)
         deliberation_preview = "\n\n".join(e["content"][:500] for e in log_entries)
         report_md = format_report_md(
             round1_scores, final_scores, synthesis, deliberation_preview
@@ -445,7 +544,7 @@ def run(
         (out / "deliberation_log.md").write_text(
             format_deliberation_log_md(log_entries), encoding="utf-8"
         )
-        scores_data = format_scores_json(round1_scores, final_scores)
+        scores_data = format_scores_json(round1_scores, final_scores, community_scores=community_scores_run)
         (out / "scores.json").write_text(
             json.dumps(scores_data, indent=2), encoding="utf-8"
         )

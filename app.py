@@ -24,6 +24,7 @@ from src.config import ANTHROPIC_API_KEY, MAX_UPLOAD_BYTES
 GITHUB_REPO_URL = "https://github.com/anfelipecb/AI-Augmetnted-Deliberative-Committee?tab=readme-ov-file"
 from src.personas import load_community_personas, load_jury_personas
 from src.proposal_loader import ProposalLoadError, load_proposal, load_proposal_from_bytes
+from src.output import format_criteria_table_html
 from src.simulate import (
     run,
     run_round1,
@@ -78,6 +79,10 @@ if "round2_done" not in st.session_state:
     st.session_state.round2_done = False
 if "round3_done" not in st.session_state:
     st.session_state.round3_done = False
+if "final_scores" not in st.session_state:
+    st.session_state.final_scores = None
+if "community_scores" not in st.session_state:
+    st.session_state.community_scores = None
 
 st.set_page_config(
     page_title="HPIC — Deliberative Committee",
@@ -132,8 +137,8 @@ proposals_dir = root / "proposals"
 outputs_dir = root / "outputs"
 outputs_dir.mkdir(parents=True, exist_ok=True)
 
-# Tabs: Home, Evaluate, Meet jury and stakeholders
-tab_home, tab_evaluate, tab_meet = st.tabs(["Home", "Evaluate proposal", "Meet jury and stakeholders"])
+# Tabs: Home, Evaluate, Meet jury and stakeholders, Score summary
+tab_home, tab_evaluate, tab_meet, tab_summary = st.tabs(["Home", "Evaluate proposal", "Meet jury and stakeholders", "Score summary"])
 
 with tab_home:
     st.markdown("### The idea")
@@ -215,6 +220,43 @@ with tab_meet:
             st.caption(f"ID: {persona['id']}")
             with st.container():
                 st.markdown(persona["content"])
+
+with tab_summary:
+    st.subheader("Summary of final voting")
+    st.caption("Main takeaway: simple average of all scores on the 6 criteria (L/M/H).")
+    if not st.session_state.round1_done:
+        st.info("Run at least **Round 1** in the **Evaluate proposal** tab to see the score summary here.")
+    else:
+        run_dir_summary = st.session_state.run_dir
+        if run_dir_summary is not None:
+            run_dir_summary = Path(run_dir_summary)
+        combined_r1 = list(st.session_state.round1_scores or [])
+        community_scores = st.session_state.community_scores
+        if community_scores is None and run_dir_summary and run_dir_summary.is_dir() and (run_dir_summary / "community_scores.json").exists():
+            try:
+                data = json.loads((run_dir_summary / "community_scores.json").read_text())
+                community_scores = data.get("community_scores", [])
+                st.session_state.community_scores = community_scores
+            except (json.JSONDecodeError, OSError):
+                community_scores = []
+        if community_scores:
+            combined_r1 = combined_r1 + list(community_scores)
+        if combined_r1:
+            st.markdown("**Round 1 — Jury + Community**")
+            st.markdown(format_criteria_table_html(combined_r1, show_average=True), unsafe_allow_html=True)
+        if st.session_state.round3_done and st.session_state.final_scores:
+            st.markdown("**Final — Jury**")
+            st.markdown(format_criteria_table_html(st.session_state.final_scores, show_average=True), unsafe_allow_html=True)
+        elif st.session_state.round3_done and run_dir_summary and run_dir_summary.is_dir() and (run_dir_summary / "scores.json").exists():
+            try:
+                data = json.loads((run_dir_summary / "scores.json").read_text())
+                final_scores = data.get("final", [])
+                if final_scores:
+                    st.session_state.final_scores = final_scores
+                    st.markdown("**Final — Jury**")
+                    st.markdown(format_criteria_table_html(final_scores, show_average=True), unsafe_allow_html=True)
+            except (json.JSONDecodeError, OSError):
+                pass
 
 # Sidebar: proposal source and mode (used by Evaluate tab)
 st.sidebar.header("Input")
@@ -318,6 +360,7 @@ with tab_evaluate:
     def _clear_rounds_after_r1():
         st.session_state.round2_done = False
         st.session_state.round3_done = False
+        st.session_state.final_scores = None
 
     if run_r1 and proposal_text:
         st.session_state.run_in_progress = True
@@ -333,6 +376,14 @@ with tab_evaluate:
             st.session_state.log_entries = log_entries
             st.session_state.jury_personas = jury_personas
             st.session_state.round1_done = True
+            if (out_dir / "community_scores.json").exists():
+                try:
+                    data = json.loads((out_dir / "community_scores.json").read_text())
+                    st.session_state.community_scores = data.get("community_scores", [])
+                except (json.JSONDecodeError, OSError):
+                    st.session_state.community_scores = []
+            else:
+                st.session_state.community_scores = []
             _clear_rounds_after_r1()
             progress.progress(100, text="Round 1 done.")
             st.success(f"Round 1 complete. Outputs in `{out_dir.name}`.")
@@ -366,12 +417,13 @@ with tab_evaluate:
         st.session_state.run_in_progress = True
         try:
             progress = st.progress(0, text="Round 3 — Final vote & synthesis…")
-            run_round3(
+            final_scores, _ = run_round3(
                 st.session_state.jury_personas,
                 st.session_state.log_entries,
                 st.session_state.round1_scores,
                 Path(st.session_state.run_dir),
             )
+            st.session_state.final_scores = final_scores
             st.session_state.round3_done = True
             progress.progress(100, text="Done.")
             st.success("Round 3 and synthesis complete.")
@@ -390,10 +442,14 @@ with tab_evaluate:
             st.session_state.round1_done = True
             st.session_state.round2_done = True
             st.session_state.round3_done = True
-            # Load written outputs into state for display
             if (out_dir / "scores.json").exists():
                 data = json.loads((out_dir / "scores.json").read_text())
                 st.session_state.round1_scores = data.get("round1", [])
+                st.session_state.final_scores = data.get("final", [])
+                st.session_state.community_scores = data.get("community_scores") or []
+            else:
+                st.session_state.final_scores = []
+                st.session_state.community_scores = []
             st.session_state.log_entries = []
             progress.progress(100, text="Done.")
             st.success(f"All rounds complete. Outputs in `{out_dir.name}`.")
@@ -422,6 +478,12 @@ with tab_evaluate:
                     if r.get("justification"):
                         st.caption(r["justification"][:400] + ("…" if len(r.get("justification", "")) > 400 else ""))
                     st.markdown("")
+                if any(r.get("criteria") for r in rows):
+                    st.markdown("**6 criteria (L/M/H)**")
+                    st.markdown(format_criteria_table_html(rows, show_average=True), unsafe_allow_html=True)
+                if st.session_state.community_scores:
+                    st.markdown("**Community stakeholders (6 criteria)**")
+                    st.markdown(format_criteria_table_html(st.session_state.community_scores, show_average=True), unsafe_allow_html=True)
                 if (run_dir / "round1_log.md").exists():
                     with st.expander("Full Round 1 log", expanded=False):
                         st.markdown((run_dir / "round1_log.md").read_text(encoding="utf-8"))
@@ -440,10 +502,22 @@ with tab_evaluate:
 
         # Round 3 + Synthesis + Full report
         if st.session_state.round3_done:
+            final_scores = st.session_state.final_scores
+            if (final_scores is None or not final_scores) and (run_dir / "scores.json").exists():
+                try:
+                    data = json.loads((run_dir / "scores.json").read_text())
+                    final_scores = data.get("final", [])
+                    st.session_state.final_scores = final_scores
+                except (json.JSONDecodeError, OSError):
+                    final_scores = []
+            final_scores = final_scores or []
             with st.expander("Round 3 — Final vote & synthesis", expanded=True):
                 report_path = run_dir / "report.md"
                 if report_path.exists():
                     st.markdown(report_path.read_text(encoding="utf-8"))
+                if final_scores and any(r.get("criteria") for r in final_scores):
+                    st.markdown("**Final 6 criteria (L/M/H)**")
+                    st.markdown(format_criteria_table_html(final_scores, show_average=True), unsafe_allow_html=True)
             with st.expander("Full deliberation log", expanded=False):
                 log_path = run_dir / "deliberation_log.md"
                 if log_path.exists():
