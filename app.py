@@ -19,7 +19,9 @@ logging.basicConfig(
     force=True,
 )
 
-from src.config import ANTHROPIC_API_KEY, GITHUB_REPO_URL, MAX_UPLOAD_BYTES
+from src.config import ANTHROPIC_API_KEY, MAX_UPLOAD_BYTES
+
+GITHUB_REPO_URL = "https://github.com/anfelipecb/AI-Augmetnted-Deliberative-Committee?tab=readme-ov-file"
 from src.personas import load_community_personas, load_jury_personas
 from src.proposal_loader import ProposalLoadError, load_proposal, load_proposal_from_bytes
 from src.simulate import (

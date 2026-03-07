@@ -108,6 +108,7 @@ The app loads the full proposal (PDF or .md) up to 500,000 characters. **Step 0 
 - `ANTHROPIC_API_KEY` — from [Anthropic Console](https://console.anthropic.com/). Required.
 - `SUMMARIZER_MODEL` (optional) — default `claude-opus-4-6`. Used for document understanding.
 - `DELIBERATION_MODEL` (optional) — default `claude-haiku-4-5`. Used for community, jury, and synthesis. For deeper reasoning you can set `claude-sonnet-4-5` (higher cost per run).
+- `GITHUB_REPO_URL` (optional) — if set, the app shows a "View source / Fork on GitHub" link in the sidebar and on the Home tab. For **Streamlit Community Cloud**, add this in the app’s **Secrets** (e.g. `GITHUB_REPO_URL = "https://github.com/your-org/HPIC"`); the published app does not use your local `.env`.
 
 Never commit `.env`. Secrets are never sent to the browser or shown in the UI.
 
