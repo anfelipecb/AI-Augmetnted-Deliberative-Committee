@@ -70,13 +70,9 @@ def format_criteria_table_html(
         "<table style='border-collapse: collapse; width: 100%;'>",
         "<thead><tr>",
     ]
+    header_style = f"border: 1px solid #ccc; padding: 8px; text-align: left; background-color: {TABLE_HEADER_COLOR}; color: white; font-weight: 600;"
     for i, h in enumerate(headers):
-        if i == 0:
-            lines.append(f"<th style='border: 1px solid #ccc; padding: 8px; text-align: left;'>{h}</th>")
-        else:
-            lines.append(
-                f"<th style='border: 1px solid #ccc; padding: 8px; text-align: left; color: {TABLE_HEADER_COLOR}; font-weight: 600;'>{h}</th>"
-            )
+        lines.append(f"<th style='{header_style}'>{h}</th>")
     lines.append("</tr></thead><tbody>")
     for row in rows:
         lines.append("<tr>")
