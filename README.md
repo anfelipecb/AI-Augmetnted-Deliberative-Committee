@@ -87,6 +87,12 @@ uv run python -m src.simulate --proposal proposals/draft.md [--mode jury|jury_qu
 
 In the app you can run **one round at a time** (see results after each) or **Run all rounds** in one go. Outputs (scores, deliberation log, report) are written to `outputs/<run_id>/`.
 
+## Why this approach works
+
+Research shows that when AI personas are built correctly—as **digital doubles** grounded in census data and neighborhood profiles—they can give voice to populations usually absent from policy debates. A Pilsen renter, an Austin business owner, a Bronzeville homeowner: each is modeled from real demographic and lived-experience data, not generic stereotypes.
+
+Drawing on James Evans' work on [**societies of thought**](https://arxiv.org/html/2601.10825v1), when these agents deliberate—when they push back, agree, and disagree—the process generates **emergent perspectives and personalities** that enrich the debate. It is not just fixed voices; it is a dynamic exchange that surfaces tensions and tradeoffs that a single analyst would miss.
+
 **Proposal length**
 
 The app loads the full proposal (PDF or .md) up to 500,000 characters. **Step 0 (Opus)** receives the first 200,000 characters and produces a detailed summary, which is saved to `proposal_summary.md`. All deliberation (community, jury rounds, synthesis) uses this summary with Haiku. This two-tier design reduces cost and keeps deliberation fast.
@@ -95,7 +101,7 @@ The app loads the full proposal (PDF or .md) up to 500,000 characters. **Step 0 
 
 - `ANTHROPIC_API_KEY` — from [Anthropic Console](https://console.anthropic.com/). Required.
 - `SUMMARIZER_MODEL` (optional) — default `claude-opus-4-6`. Used for document understanding.
-- `DELIBERATION_MODEL` (optional) — default `claude-haiku-4-5`. Used for community, jury, and synthesis.
+- `DELIBERATION_MODEL` (optional) — default `claude-haiku-4-5`. Used for community, jury, and synthesis. For deeper reasoning you can set `claude-sonnet-4-5` (higher cost per run).
 
 Never commit `.env`. Secrets are never sent to the browser or shown in the UI.
 

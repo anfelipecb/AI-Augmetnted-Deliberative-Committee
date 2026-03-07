@@ -19,7 +19,7 @@ logging.basicConfig(
 )
 
 from src.config import ANTHROPIC_API_KEY, MAX_UPLOAD_BYTES
-from src.personas import load_jury_personas
+from src.personas import load_community_personas, load_jury_personas
 from src.proposal_loader import ProposalLoadError, load_proposal, load_proposal_from_bytes
 from src.simulate import (
     run,
@@ -129,8 +129,8 @@ proposals_dir = root / "proposals"
 outputs_dir = root / "outputs"
 outputs_dir.mkdir(parents=True, exist_ok=True)
 
-# Tabs: Home (landing) and Evaluate
-tab_home, tab_evaluate = st.tabs(["Home", "Evaluate proposal"])
+# Tabs: Home, Evaluate, Meet jury and stakeholders
+tab_home, tab_evaluate, tab_meet = st.tabs(["Home", "Evaluate proposal", "Meet jury and stakeholders"])
 
 with tab_home:
     st.markdown("### The idea")
@@ -139,6 +139,12 @@ with tab_home:
         "An AI panel of expert and community personas scores and discusses a proposal across three criteria: "
         "**Impact**, **Fiscal Responsibility**, and **Sustainability**. The process mirrors a multi-round committee: "
         "individual scoring, deliberation on each other’s views, then final votes and a short consensus report."
+    )
+    st.markdown("---")
+    st.markdown("### Why this approach works")
+    st.markdown(
+        "When AI personas are built as **digital doubles** from census data and neighborhood profiles, they can give voice to populations usually absent from policy debates. "
+        "Drawing on James Evans' work on **societies of thought**, deliberation among these agents generates emergent perspectives that enrich the debate—a dynamic exchange that surfaces tensions and tradeoffs a single analyst would miss."
     )
     st.markdown("---")
     st.markdown("### Procedure")
@@ -161,6 +167,32 @@ with tab_home:
     )
     st.markdown("")
     st.info("Go to the **Evaluate proposal** tab to upload a proposal and run the deliberation.")
+
+with tab_meet:
+    st.markdown("Select a jury expert or community stakeholder to view their profile and personality.")
+    meet_filter = st.radio(
+        "Show",
+        ["Jury", "Community"],
+        horizontal=True,
+        label_visibility="collapsed",
+    )
+    if meet_filter == "Jury":
+        personas = load_jury_personas(quick=False)
+    else:
+        personas = load_community_personas()
+    if not personas:
+        st.warning(f"No {meet_filter.lower()} personas found.")
+    else:
+        options = [f"{p['name']} ({p['id']})" for p in personas]
+        chosen = st.selectbox("Persona", options, label_visibility="collapsed")
+        if chosen:
+            idx = next(i for i, p in enumerate(personas) if f"{p['name']} ({p['id']})" == chosen)
+            persona = personas[idx]
+            st.markdown("---")
+            st.subheader(persona["name"])
+            st.caption(f"ID: {persona['id']}")
+            with st.container():
+                st.markdown(persona["content"])
 
 # Sidebar: proposal source and mode (used by Evaluate tab)
 st.sidebar.header("Input")

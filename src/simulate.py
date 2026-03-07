@@ -285,7 +285,7 @@ Proposal summary:
             response = "No response."
         _log_phase(f"Agent {persona['id']} done")
         time.sleep(API_DELAY_SECONDS)
-        parts.append(f"**{persona['name']}** ({persona['id']}): {response[:800]}")
+        parts.append(f"**{persona['name']}** ({persona['id']}): {response}")
     return "\n\n".join(parts)
 
 

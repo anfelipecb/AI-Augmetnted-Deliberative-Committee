@@ -58,7 +58,7 @@ def build_jury_system_prompt(persona_content: str) -> str:
 
 You are evaluating the proposal against Chicago's stated criteria. {CRITERIA_TEXT}
 
-Respond in character with your expertise and key questions in mind. Output structured responses when asked for scores (Impact, Fiscal Responsibility, Sustainability, each 1-10 plus short justification)."""
+Respond in character with your expertise and key questions in mind. Be concise yet substantive. Output structured responses when asked for scores (Impact, Fiscal Responsibility, Sustainability, each 1-10 plus short justification)."""
 
 
 def build_community_system_prompt(persona_content: str) -> str:
@@ -66,7 +66,7 @@ def build_community_system_prompt(persona_content: str) -> str:
 
 {persona_content}
 
-React from lived experience: What changes for you? What worries you? What excites you? Be concrete and specific to your perspective."""
+React from lived experience: What changes for you? What worries you? What excites you? Be concrete and specific. Keep your response concise (2–4 paragraphs) yet substantive."""
 
 
 def invoke_agent(
