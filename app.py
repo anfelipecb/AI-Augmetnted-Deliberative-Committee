@@ -21,10 +21,34 @@ logging.basicConfig(
 
 from src.config import ANTHROPIC_API_KEY, MAX_UPLOAD_BYTES
 
-GITHUB_REPO_URL = "https://github.com/anfelipecb/AI-Augmetnted-Deliberative-Committee?tab=readme-ov-file"
+try:
+    from src.config import GITHUB_REPO_URL
+except ImportError:
+    GITHUB_REPO_URL = ""
+if not (GITHUB_REPO_URL or "").strip():
+    GITHUB_REPO_URL = "https://github.com/anfelipecb/AI-Augmetnted-Deliberative-Committee?tab=readme-ov-file"
+
 from src.personas import load_community_personas, load_jury_personas
 from src.proposal_loader import ProposalLoadError, load_proposal, load_proposal_from_bytes
-from src.output import format_criteria_table_html
+
+try:
+    from src.output import format_criteria_table_html
+except ImportError:
+    # Fallback so Streamlit Cloud / older deploys still load (e.g. if src.output fails to import)
+    _CRITERIA_6 = ("fiscal_impact", "equity_access", "political_feasibility", "sustainability", "team_retention", "accountability")
+    _LABELS = ("", "Fiscal Impact", "Equity & Access", "Political Feasibility", "Sustainability", "Team Retention", "Accountability")
+
+    def format_criteria_table_html(scores, show_average=True, name_key="name"):
+        if not scores:
+            return "<p>No scores to display.</p>"
+        rows = []
+        for row in scores:
+            name = row.get(name_key, row.get("agent_id", "?"))
+            criteria = row.get("criteria") or {}
+            cells = [str(criteria.get(c, "") or "").strip() or "—" for c in _CRITERIA_6]
+            rows.append("<tr><td>" + str(name) + "</td>" + "".join(f"<td>{c}</td>" for c in cells) + "</tr>")
+        head = "<tr>" + "".join(f"<th>{h}</th>" for h in _LABELS) + "</tr>"
+        return "<table style='border-collapse: collapse;'><thead>" + head + "</thead><tbody>" + "".join(rows) + "</tbody></table>"
 from src.simulate import (
     run,
     run_round1,
