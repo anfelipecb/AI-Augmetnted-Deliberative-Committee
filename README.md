@@ -2,6 +2,12 @@
 
 Evaluate Chicago stadium and urban policy proposals using an AI panel of expert and community perspectives.
 
+## Demo
+
+The app lets you upload or select a proposal, choose a deliberation mode (jury-only or full with community), and run rounds step-by-step or all at once. Below is a short walkthrough.
+
+![App demo](docs/final_take.gif)
+
 ## Architecture
 
 The app uses a two-tier model design: Opus for document understanding, Haiku for deliberation.

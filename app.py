@@ -18,7 +18,7 @@ logging.basicConfig(
     force=True,
 )
 
-from src.config import ANTHROPIC_API_KEY, MAX_UPLOAD_BYTES
+from src.config import ANTHROPIC_API_KEY, GITHUB_REPO_URL, MAX_UPLOAD_BYTES
 from src.personas import load_community_personas, load_jury_personas
 from src.proposal_loader import ProposalLoadError, load_proposal, load_proposal_from_bytes
 from src.simulate import (
@@ -167,6 +167,15 @@ with tab_home:
     )
     st.markdown("")
     st.info("Go to the **Evaluate proposal** tab to upload a proposal and run the deliberation.")
+    # Video demo at end of Home so users can see how it works
+    demo_path = root / "docs" / "final_take.webm"
+    if demo_path.exists():
+        st.markdown("---")
+        st.markdown("### See how it works")
+        st.video(str(demo_path), format="video/webm")
+    if GITHUB_REPO_URL:
+        st.markdown("---")
+        st.markdown(f"**Replicate or fork:** [View source on GitHub]({GITHUB_REPO_URL})")
 
 with tab_meet:
     st.markdown("Select a jury expert or community stakeholder to view their profile and personality.")
@@ -254,6 +263,9 @@ st.sidebar.markdown("---")
 st.sidebar.caption(
     "Decision-support tool. Not a substitute for public process or elected governance."
 )
+if GITHUB_REPO_URL:
+    st.sidebar.markdown("---")
+    st.sidebar.markdown(f"[View source / Fork on GitHub]({GITHUB_REPO_URL})")
 
 with tab_evaluate:
     # Main: require proposal and API
