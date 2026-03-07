@@ -5,6 +5,7 @@ Upload or select a proposal, choose mode (jury size, full), run rounds step-by-s
 or all at once. View results per round and full report. API key is never exposed.
 """
 
+import base64
 import json
 import logging
 from pathlib import Path
@@ -167,12 +168,22 @@ with tab_home:
     )
     st.markdown("")
     st.info("Go to the **Evaluate proposal** tab to upload a proposal and run the deliberation.")
-    # Video demo at end of Home so users can see how it works
-    demo_path = root / "docs" / "final_take.webm"
-    if demo_path.exists():
-        st.markdown("---")
-        st.markdown("### See how it works")
-        st.video(str(demo_path), format="video/webm")
+    # Demo at end of Home: prefer video (webm), fallback to GIF (works everywhere incl. Safari)
+    st.markdown("---")
+    st.markdown("### See how it works")
+    demo_webm = root / "docs" / "final_take.webm"
+    demo_gif = root / "docs" / "final_take.gif"
+    if demo_webm.exists():
+        st.video(str(demo_webm), format="video/webm")
+    elif demo_gif.exists():
+        gif_bytes = demo_gif.read_bytes()
+        b64 = base64.b64encode(gif_bytes).decode("utf-8")
+        st.markdown(
+            f'<img src="data:image/gif;base64,{b64}" alt="App demo" style="max-width:100%; border-radius:8px;">',
+            unsafe_allow_html=True,
+        )
+    else:
+        st.caption("Demo media not found. Add `docs/final_take.webm` or `docs/final_take.gif` to show a walkthrough.")
     if GITHUB_REPO_URL:
         st.markdown("---")
         st.markdown(f"**Replicate or fork:** [View source on GitHub]({GITHUB_REPO_URL})")

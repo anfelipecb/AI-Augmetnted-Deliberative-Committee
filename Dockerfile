@@ -16,6 +16,7 @@ COPY src/ src/
 COPY agents/ agents/
 COPY app.py ./
 COPY .streamlit/ .streamlit/
+COPY docs/ docs/
 
 RUN uv sync --locked
 
