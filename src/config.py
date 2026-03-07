@@ -36,3 +36,6 @@ ALLOWED_PROPOSAL_EXTENSIONS: set[str] = {".md", ".pdf"}
 
 # Max upload size (bytes) for web UI
 MAX_UPLOAD_BYTES: int = 20 * 1024 * 1024  # 20 MB
+
+# Optional: GitHub repo URL for "Fork / replicate" link in the app
+GITHUB_REPO_URL: str = (os.environ.get("GITHUB_REPO_URL") or "").strip() or ""
