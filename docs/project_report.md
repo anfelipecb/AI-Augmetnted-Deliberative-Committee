@@ -119,7 +119,7 @@ sys_prompt = build_jury_system_prompt(persona["content"])
 response = invoke_agent(persona["id"], sys_prompt, prompt, None)
 ```
 
-**Agent invocation.** The `invoke_agent` function sends the system prompt and messages to the Anthropic API. For Round 2 and 3, `conversation_history` can include prior rounds so the agent sees the deliberation so far. For Round 1 (scoring), the API uses Anthropic structured outputs: a JSON schema is passed via `output_config.format`, and the model is constrained to return valid JSON. Round 3 uses prompt-only JSON; when the model returns prose (e.g. after seeing the long deliberation transcript), scores fall back to Round 1.
+**Agent invocation.** The `invoke_agent` function sends the system prompt and messages to the Anthropic API. For Round 2 and 3, `conversation_history` can include prior rounds so the agent sees the deliberation so far. For Round 1 (scoring), the API uses Anthropic structured outputs: a JSON schema is passed via `output_config.format`, and the model is constrained to return valid JSON. Round 3 uses a scores-first prompt: agents put Impact, Fiscal, Sustainability, and Verdict at the very beginning of their response, then commentary; JSON is optional at the end. This improves parseability when the model adds prose. When parsing fails, scores fall back to Round 1.
 
 ```python
 # src/agents.py: API call (with optional output_schema for scoring rounds)

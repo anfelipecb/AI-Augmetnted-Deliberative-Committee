@@ -91,7 +91,7 @@ uv run python -m src.simulate --proposal proposals/draft.md [--mode jury|jury_qu
 3. **Round 3 — Final vote**  
    Each panelist gives final scores and a two-sentence verdict. A final **synthesis** call produces a short consensus report (strengths, weaknesses, conditions for recommendation).
 
-Round 1 uses **Anthropic structured outputs** (JSON schema). Round 3 falls back to Round 1 scores when the model returns prose instead of JSON (e.g. after the long deliberation transcript).
+Round 1 uses **Anthropic structured outputs** (JSON schema). Round 3 uses a scores-first prompt (agents put Impact, Fiscal, Sustainability, Verdict at the very beginning); fallback to Round 1 when parsing fails.
 
 In the app you can run **one round at a time** (see results after each) or **Run all rounds** in one go. Outputs (scores, deliberation log, report) are written to `outputs/<run_id>/`.
 
