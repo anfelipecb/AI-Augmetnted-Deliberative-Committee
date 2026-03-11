@@ -91,6 +91,8 @@ uv run python -m src.simulate --proposal proposals/draft.md [--mode jury|jury_qu
 3. **Round 3 — Final vote**  
    Each panelist gives final scores and a two-sentence verdict. A final **synthesis** call produces a short consensus report (strengths, weaknesses, conditions for recommendation).
 
+Round 1 uses **Anthropic structured outputs** (JSON schema). Round 3 falls back to Round 1 scores when the model returns prose instead of JSON (e.g. after the long deliberation transcript).
+
 In the app you can run **one round at a time** (see results after each) or **Run all rounds** in one go. Outputs (scores, deliberation log, report) are written to `outputs/<run_id>/`.
 
 ## Why this approach works
@@ -200,3 +202,11 @@ uv run pytest tests/test_agents.py -m integration -v
 ```
 
 Skipped if `ANTHROPIC_API_KEY` is unset or invalid.
+
+To evaluate a run's outputs (score validity, criteria, verdict consistency):
+
+```bash
+uv run python -m src.evaluation --run-dir outputs/<run_id>
+```
+
+A demo notebook (`docs/notebooks/hpic_demo.ipynb`) runs the pipeline on a sample proposal (`docs/notebooks/sample_proposal.md`), shows visualizations and alignment tests, and integrates with the evaluation suite. Requires `ANTHROPIC_API_KEY` in `.env`; falls back to embedded data if the API fails.

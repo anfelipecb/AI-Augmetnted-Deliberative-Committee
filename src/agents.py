@@ -10,9 +10,46 @@ from src.config import (
     DELIBERATION_MODEL,
     SUMMARIZER_MODEL,
 )
-from src.criteria import CRITERIA_LABELS, CRITERIA_SUB
+from src.criteria import CRITERIA_6, CRITERIA_LABELS, CRITERIA_SUB
 
 logger = logging.getLogger(__name__)
+
+# JSON schema for jury scoring. Enforced via Anthropic structured outputs.
+_CRITERIA_PROPERTIES = {
+    k: {"type": "string", "enum": ["LOW", "MEDIUM", "HIGH"]} for k in CRITERIA_6
+}
+_CRITERIA_SCHEMA = {
+    "type": "object",
+    "properties": _CRITERIA_PROPERTIES,
+    "required": list(CRITERIA_6),
+    "additionalProperties": False,
+}
+
+JURY_ROUND1_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "impact": {"type": "integer", "minimum": 1, "maximum": 10},
+        "fiscal": {"type": "integer", "minimum": 1, "maximum": 10},
+        "sustainability": {"type": "integer", "minimum": 1, "maximum": 10},
+        "justification": {"type": "string"},
+        "criteria": _CRITERIA_SCHEMA,
+    },
+    "required": ["impact", "fiscal", "sustainability", "justification", "criteria"],
+    "additionalProperties": False,
+}
+
+JURY_ROUND3_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "impact": {"type": "integer", "minimum": 1, "maximum": 10},
+        "fiscal": {"type": "integer", "minimum": 1, "maximum": 10},
+        "sustainability": {"type": "integer", "minimum": 1, "maximum": 10},
+        "verdict": {"type": "string"},
+        "criteria": _CRITERIA_SCHEMA,
+    },
+    "required": ["impact", "fiscal", "sustainability", "verdict", "criteria"],
+    "additionalProperties": False,
+}
 
 CRITERIA_TEXT = """
 Evaluate the proposal on these three criteria (score each 1-10 with justification):
@@ -98,6 +135,8 @@ def invoke_agent(
     user_message: str,
     conversation_history: list[dict[str, str]] | None = None,
     model: str | None = None,
+    output_schema: dict | None = None,
+    max_tokens: int | None = None,
 ) -> str:
     """
     Call Claude with the given system prompt and user message.
@@ -107,6 +146,8 @@ def invoke_agent(
         system_prompt: Full system prompt including persona.
         user_message: This turn's user message.
         conversation_history: Optional prior messages [{"role": "user"|"assistant", "content": "..."}].
+        model: Override model (default: DELIBERATION_MODEL).
+        output_schema: Optional JSON schema to enforce structured output (Anthropic structured outputs).
 
     Returns:
         Assistant message text.
@@ -128,13 +169,21 @@ def invoke_agent(
                 messages.append({"role": role, "content": content})
     messages.append({"role": "user", "content": user_message})
     model_to_use = model or DELIBERATION_MODEL
+    kwargs: dict = {
+        "model": model_to_use,
+        "max_tokens": max_tokens or 4096,
+        "system": system_prompt,
+        "messages": messages,
+    }
+    if output_schema:
+        kwargs["output_config"] = {
+            "format": {
+                "type": "json_schema",
+                "schema": output_schema,
+            }
+        }
     try:
-        response = client.messages.create(
-            model=model_to_use,
-            max_tokens=4096,
-            system=system_prompt,
-            messages=messages,
-        )
+        response = client.messages.create(**kwargs)
         return response.content[0].text if response.content else ""
     except NotFoundError as e:
         logger.error(

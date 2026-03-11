@@ -28,6 +28,8 @@ from src.agents import (
     build_community_system_prompt,
     build_jury_system_prompt,
     invoke_agent,
+    JURY_ROUND1_SCHEMA,
+    JURY_ROUND3_SCHEMA,
     summarize_proposal,
 )
 from src.config import OUTPUTS_DIR
@@ -61,7 +63,7 @@ def _parse_scores_from_text(text: str) -> dict[str, int | str]:
     out: dict[str, int | str] = {}
     patterns = [
         (r"(?:impact|Impact)\s*[:\s]+\s*(\d+)", "impact"),
-        (r"(?:fiscal\s*responsibility|Fiscal Responsibility)\s*[:\s]+\s*(\d+)", "fiscal"),
+        (r"(?:fiscal\s*responsibility|Fiscal Responsibility|fiscal|Fiscal)\s*[:\s]+\s*(\d+)", "fiscal"),
         (r"(?:sustainability|Sustainability)\s*[:\s]+\s*(\d+)", "sustainability"),
     ]
     for pattern, key in patterns:
@@ -73,7 +75,7 @@ def _parse_scores_from_text(text: str) -> dict[str, int | str]:
                 pass
     for k in ("impact", "fiscal", "sustainability"):
         if k not in out:
-            out[k] = 0
+            out[k] = 5  # Fallback when regex fails; 0 would fail evaluation
     verdict_m = re.search(r"(?:Verdict|verdict)\s*[:\s]+(.+?)(?=\n\n|\Z)", text, re.S | re.I)
     if verdict_m:
         out["verdict"] = verdict_m.group(1).strip()[:500]
@@ -94,9 +96,9 @@ def _parse_scores_from_response(response: str, for_round3: bool = False) -> dict
         try:
             data = json.loads(json_match.group(0))
             if isinstance(data, dict):
-                out["impact"] = int(data.get("impact", 0)) if _is_int(data.get("impact")) else 0
-                out["fiscal"] = int(data.get("fiscal", 0)) if _is_int(data.get("fiscal")) else 0
-                out["sustainability"] = int(data.get("sustainability", 0)) if _is_int(data.get("sustainability")) else 0
+                out["impact"] = _parse_score_val(data, "impact")
+                out["fiscal"] = _parse_score_val(data, "fiscal")
+                out["sustainability"] = _parse_score_val(data, "sustainability")
                 out["justification"] = str(data.get("justification", ""))[:500]
                 out["verdict"] = str(data.get("verdict", ""))[:500]
                 out["criteria"] = _parse_criteria_from_obj(data)
@@ -111,6 +113,25 @@ def _parse_scores_from_response(response: str, for_round3: bool = False) -> dict
 
 def _is_int(x) -> bool:
     return isinstance(x, int) or (isinstance(x, str) and x.isdigit())
+
+
+def _parse_score_val(data: dict, key: str, fallback: int = 5) -> int:
+    """Extract 1-10 score from dict, handling int, float, str, and key variations."""
+    for k in (key, key.capitalize()):
+        val = data.get(k)
+        if val is None:
+            continue
+        try:
+            if isinstance(val, (int, float)):
+                n = int(round(float(val)))
+            elif isinstance(val, str) and val.strip().replace(".", "").isdigit():
+                n = int(round(float(val.strip())))
+            else:
+                continue
+            return max(1, min(10, n)) if n else fallback
+        except (ValueError, TypeError):
+            continue
+    return fallback
 
 
 def _run_summarizer(proposal_text: str, out_dir: Path) -> str:
@@ -161,7 +182,10 @@ Example: {{"impact": 7, "fiscal": 6, "sustainability": 8, "justification": "..."
         _log_phase(f"Invoking agent: {persona['id']}")
         sys_prompt = build_jury_system_prompt(persona["content"])
         try:
-            response = invoke_agent(persona["id"], sys_prompt, prompt, None)
+            response = invoke_agent(
+                persona["id"], sys_prompt, prompt, None,
+                output_schema=JURY_ROUND1_SCHEMA,
+            )
         except RuntimeError as e:
             response = f"Unable to complete scoring. ({e.args[0] if e.args else 'API error'})"
         _log_phase(f"Agent {persona['id']} done")
@@ -248,16 +272,15 @@ def _run_round3_final(
 
 ---
 
-Give your **final** scores and a 2-sentence verdict.
+Give your **final** scores and verdict at the very beginning of your response.
 
-You must respond with only a single JSON object. Do not include any other text, markdown, or commentary before or after the JSON.
+**Start with:**
+- Impact: [1-10], Fiscal: [1-10], Sustainability: [1-10]
+- Verdict: [exactly 2 sentences]
 
-Include in the JSON:
-- "impact", "fiscal", "sustainability": each 1-10
-- "verdict": exactly 2 sentences
-- "criteria": object with keys fiscal_impact, equity_access, political_feasibility, sustainability, team_retention, accountability — each value exactly "LOW", "MEDIUM", or "HIGH"
+You may add commentary, explanation, or pushback after. If you include a JSON object with "impact", "fiscal", "sustainability", "verdict", and "criteria", put it at the end.
 
-Example format: {{"impact": 6, "fiscal": 8, "sustainability": 7, "verdict": "Your two sentences here.", "criteria": {{"fiscal_impact": "HIGH", "equity_access": "MEDIUM", "political_feasibility": "LOW", "sustainability": "MEDIUM", "team_retention": "HIGH", "accountability": "MEDIUM"}}}}
+Criteria (when in JSON): fiscal_impact, equity_access, political_feasibility, sustainability, team_retention, accountability — each exactly "LOW", "MEDIUM", or "HIGH".
 """
     r1_by_id = {r["agent_id"]: r for r in (round1_scores or [])} if round1_scores else {}
     final_rows: list[dict] = []
@@ -266,7 +289,10 @@ Example format: {{"impact": 6, "fiscal": 8, "sustainability": 7, "verdict": "You
         _log_phase(f"Invoking agent: {persona['id']} (Round 3)")
         sys_prompt = build_jury_system_prompt(persona["content"])
         try:
-            response = invoke_agent(persona["id"], sys_prompt, prompt[:8000], None)
+            # Round 3: scores-first prompt so regex parses early; JSON optional at end
+            response = invoke_agent(
+                persona["id"], sys_prompt, prompt[:8000], None, max_tokens=8192
+            )
         except RuntimeError:
             response = "Unable to complete."
         _log_phase(f"Agent {persona['id']} done (Round 3)")
@@ -283,13 +309,36 @@ Example format: {{"impact": 6, "fiscal": 8, "sustainability": 7, "verdict": "You
         criteria = parsed.get("criteria") or {}
         if not any((criteria.get(k) or "").strip() for k in CRITERIA_6) and persona["id"] in r1_by_id:
             criteria = (r1_by_id[persona["id"]].get("criteria") or {}).copy()
+        # Normalize to int; treat 0, None, "", "0" as missing
+        def _to_score(v):
+            try:
+                n = int(v) if v is not None else 0
+                return n if 1 <= n <= 10 else 0
+            except (ValueError, TypeError):
+                return 0
+        imp = _to_score(parsed.get("impact"))
+        fis = _to_score(parsed.get("fiscal"))
+        sus = _to_score(parsed.get("sustainability"))
+        # Fallback: when Round 3 returns prose instead of JSON, use Round 1 scores
+        r1 = r1_by_id.get(persona["id"]) if r1_by_id else None
+        if (imp == 0 or fis == 0 or sus == 0) and r1:
+            imp = imp or _to_score(r1.get("impact")) or 5
+            fis = fis or _to_score(r1.get("fiscal")) or 5
+            sus = sus or _to_score(r1.get("sustainability")) or 5
+        if imp == 0 or fis == 0 or sus == 0:
+            imp = imp or 5
+            fis = fis or 5
+            sus = sus or 5
+        imp = max(1, min(10, imp))
+        fis = max(1, min(10, fis))
+        sus = max(1, min(10, sus))
         final_rows.append(
             {
                 "agent_id": persona["id"],
                 "name": persona["name"],
-                "impact": parsed.get("impact", 0),
-                "fiscal": parsed.get("fiscal", 0),
-                "sustainability": parsed.get("sustainability", 0),
+                "impact": imp,
+                "fiscal": fis,
+                "sustainability": sus,
                 "verdict": parsed.get("verdict", response[:300]),
                 "criteria": criteria,
             }

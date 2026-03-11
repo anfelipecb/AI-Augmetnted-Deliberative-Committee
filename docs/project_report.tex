@@ -1,0 +1,498 @@
+% Options for packages loaded elsewhere
+\PassOptionsToPackage{unicode}{hyperref}
+\PassOptionsToPackage{hyphens}{url}
+\PassOptionsToPackage{dvipsnames,svgnames,x11names}{xcolor}
+%
+\documentclass[
+  11pt,
+]{article}
+\usepackage{amsmath,amssymb}
+\usepackage{iftex}
+\ifPDFTeX
+  \usepackage[T1]{fontenc}
+  \usepackage[utf8]{inputenc}
+  \usepackage{textcomp} % provide euro and other symbols
+\else % if luatex or xetex
+  \usepackage{unicode-math} % this also loads fontspec
+  \defaultfontfeatures{Scale=MatchLowercase}
+  \defaultfontfeatures[\rmfamily]{Ligatures=TeX,Scale=1}
+\fi
+\usepackage{lmodern}
+\ifPDFTeX\else
+  % xetex/luatex font selection
+\fi
+% Use upquote if available, for straight quotes in verbatim environments
+\IfFileExists{upquote.sty}{\usepackage{upquote}}{}
+\IfFileExists{microtype.sty}{% use microtype if available
+  \usepackage[]{microtype}
+  \UseMicrotypeSet[protrusion]{basicmath} % disable protrusion for tt fonts
+}{}
+\makeatletter
+\@ifundefined{KOMAClassName}{% if non-KOMA class
+  \IfFileExists{parskip.sty}{%
+    \usepackage{parskip}
+  }{% else
+    \setlength{\parindent}{0pt}
+    \setlength{\parskip}{6pt plus 2pt minus 1pt}}
+}{% if KOMA class
+  \KOMAoptions{parskip=half}}
+\makeatother
+\usepackage{xcolor}
+\usepackage[margin=1in]{geometry}
+\usepackage{color}
+\usepackage{fancyvrb}
+\newcommand{\VerbBar}{|}
+\newcommand{\VERB}{\Verb[commandchars=\\\{\}]}
+\DefineVerbatimEnvironment{Highlighting}{Verbatim}{commandchars=\\\{\}}
+% Add ',fontsize=\small' for more characters per line
+\newenvironment{Shaded}{}{}
+\newcommand{\AlertTok}[1]{\textcolor[rgb]{1.00,0.00,0.00}{\textbf{#1}}}
+\newcommand{\AnnotationTok}[1]{\textcolor[rgb]{0.38,0.63,0.69}{\textbf{\textit{#1}}}}
+\newcommand{\AttributeTok}[1]{\textcolor[rgb]{0.49,0.56,0.16}{#1}}
+\newcommand{\BaseNTok}[1]{\textcolor[rgb]{0.25,0.63,0.44}{#1}}
+\newcommand{\BuiltInTok}[1]{\textcolor[rgb]{0.00,0.50,0.00}{#1}}
+\newcommand{\CharTok}[1]{\textcolor[rgb]{0.25,0.44,0.63}{#1}}
+\newcommand{\CommentTok}[1]{\textcolor[rgb]{0.38,0.63,0.69}{\textit{#1}}}
+\newcommand{\CommentVarTok}[1]{\textcolor[rgb]{0.38,0.63,0.69}{\textbf{\textit{#1}}}}
+\newcommand{\ConstantTok}[1]{\textcolor[rgb]{0.53,0.00,0.00}{#1}}
+\newcommand{\ControlFlowTok}[1]{\textcolor[rgb]{0.00,0.44,0.13}{\textbf{#1}}}
+\newcommand{\DataTypeTok}[1]{\textcolor[rgb]{0.56,0.13,0.00}{#1}}
+\newcommand{\DecValTok}[1]{\textcolor[rgb]{0.25,0.63,0.44}{#1}}
+\newcommand{\DocumentationTok}[1]{\textcolor[rgb]{0.73,0.13,0.13}{\textit{#1}}}
+\newcommand{\ErrorTok}[1]{\textcolor[rgb]{1.00,0.00,0.00}{\textbf{#1}}}
+\newcommand{\ExtensionTok}[1]{#1}
+\newcommand{\FloatTok}[1]{\textcolor[rgb]{0.25,0.63,0.44}{#1}}
+\newcommand{\FunctionTok}[1]{\textcolor[rgb]{0.02,0.16,0.49}{#1}}
+\newcommand{\ImportTok}[1]{\textcolor[rgb]{0.00,0.50,0.00}{\textbf{#1}}}
+\newcommand{\InformationTok}[1]{\textcolor[rgb]{0.38,0.63,0.69}{\textbf{\textit{#1}}}}
+\newcommand{\KeywordTok}[1]{\textcolor[rgb]{0.00,0.44,0.13}{\textbf{#1}}}
+\newcommand{\NormalTok}[1]{#1}
+\newcommand{\OperatorTok}[1]{\textcolor[rgb]{0.40,0.40,0.40}{#1}}
+\newcommand{\OtherTok}[1]{\textcolor[rgb]{0.00,0.44,0.13}{#1}}
+\newcommand{\PreprocessorTok}[1]{\textcolor[rgb]{0.74,0.48,0.00}{#1}}
+\newcommand{\RegionMarkerTok}[1]{#1}
+\newcommand{\SpecialCharTok}[1]{\textcolor[rgb]{0.25,0.44,0.63}{#1}}
+\newcommand{\SpecialStringTok}[1]{\textcolor[rgb]{0.73,0.40,0.53}{#1}}
+\newcommand{\StringTok}[1]{\textcolor[rgb]{0.25,0.44,0.63}{#1}}
+\newcommand{\VariableTok}[1]{\textcolor[rgb]{0.10,0.09,0.49}{#1}}
+\newcommand{\VerbatimStringTok}[1]{\textcolor[rgb]{0.25,0.44,0.63}{#1}}
+\newcommand{\WarningTok}[1]{\textcolor[rgb]{0.38,0.63,0.69}{\textbf{\textit{#1}}}}
+\setlength{\emergencystretch}{3em} % prevent overfull lines
+\providecommand{\tightlist}{%
+  \setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}
+\setcounter{secnumdepth}{-\maxdimen} % remove section numbering
+\usepackage{float}
+\floatplacement{figure}{H}
+\usepackage{bookmark}
+\IfFileExists{xurl.sty}{\usepackage{xurl}}{} % add URL line breaks if available
+\urlstyle{same}
+\hypersetup{
+  pdftitle={Advanced Machine Learning - Final Project},
+  pdfauthor={Andres F. Camacho},
+  colorlinks=true,
+  linkcolor={blue},
+  filecolor={Maroon},
+  citecolor={blue},
+  urlcolor={blue},
+  pdfcreator={LaTeX via pandoc}}
+
+\title{Advanced Machine Learning - Final Project}
+\author{Andres F. Camacho}
+\date{March 10, 2026}
+
+\begin{document}
+\maketitle
+
+\subsection{Introduction}\label{introduction}
+
+Last Saturday, March 7th, I participated with my team in the Harris
+Public Policy Challenge (HPIC) on Chicago stadium and urban policy. The
+question I faced was simple but daunting: how do you evaluate a policy
+proposal when it's impossible to get everyone in Chicago in the same
+room? The city has 2.7 million residents---each with their own
+perspective on stadiums, subsidies, displacement, and civic identity.
+Ignoring those voices isn't an option, but convening them all isn't
+realistic either.
+
+That's where the idea came from. After taking the course \emph{AI Agents
+for Social Science} and \emph{Advanced Machine Learning for Public
+Polocy}, I proposed using AI agents to simulate a deliberative
+committee: expert panelists and community stakeholders who could
+evaluate proposals together, push back on each other, and produce a
+structured assessment. The goal wasn't to replace human judgment but to
+\emph{inform} it---to surface tensions and tradeoffs that a single
+analyst might miss, and to give voice to perspectives that are often
+absent from policy debates. I ran my team's proposal through the system;
+it didn't score high on all components, but the deliberation surfaced
+gaps and tensions that helped us improve it before submission.
+
+This report describes what I built, why, and how it works. Here's the
+project in practice: you can explore the \textbf{live app} and the
+\textbf{code} yourself.
+
+\textbf{Try it:}
+\href{https://ai-augmetnted-deliberative-committee-hpic.streamlit.app}{Streamlit
+Dashboard} ·
+\href{https://github.com/anfelipecb/AI-Augmetnted-Deliberative-Committee}{GitHub
+Repository}
+
+\subsection{The Problem}\label{the-problem}
+
+The Harris challenge asks: \emph{What should be the City of Chicago's
+policy toward supporting professional sports teams and facilities?}
+Stadium deals are messy. They involve fiscal trade-offs (who pays, who
+benefits?), equity concerns (who gets displaced, who gets jobs?), and
+political feasibility (will City Council pass it?). Evaluating proposals
+well means hearing from fiscal experts, community organizers, urban
+economists, and residents who actually live near these projects. But
+convening that panel is costly and slow. In practice, a lot of voices
+never get heard.
+
+I wanted to see if AI agents could help. Not to make the decision, but
+to \emph{inform} it---by simulating a diverse panel that deliberates,
+disagrees, and produces a structured evaluation. The idea: rather than
+ignoring 2.7 million Chicagoans, I'd build agents that represent
+different perspectives and let them debate.
+
+\subsection{Literature Motivation and Recent
+Developments}\label{literature-motivation-and-recent-developments}
+
+This project is grounded in recent advancements in multi-agent LLM
+systems, synthetic sampling, and AI ethics. The design of the
+deliberative committee draws heavily from the following literature:
+
+\textbf{Societies of Thought and Deliberation.} The core mechanism of
+the committee is motivated by Kim, Evans, et al.~(2026), who demonstrate
+that reasoning models generate ``societies of thought''---simulating
+multi-agent-like dialogue to diversify perspectives, debate among
+cognitive personas, and reconcile conflicting views. By structuring the
+jury to deliberate across three rounds, this project harnesses these
+emergent dynamics to surface tradeoffs that a single evaluator might
+miss. Furthermore, Lai et al.~(2025) find that ``biased'' or opinionated
+AI agents improve human decision-making by acting as strong heuristics;
+similarly, assigning jury members explicit expert lenses (e.g., fiscal
+constraint, urban economics) sharpens the debate and provides clear,
+adversarial evaluation.
+
+\textbf{Digital Doubles and Synthetic Subjects.} To capture community
+impact, the pipeline simulates stakeholders using real demographic data.
+This approach is motivated by Broska et al.~(2025), who propose the
+``Mixed Subjects Design,'' treating LLMs as ``Silicon Subjects.'' This
+framework validates using digital doubles to model population responses
+when recruiting specific demographics is too costly. I sampled from ACS
+2022 5-year estimates (income, housing, commute, occupation tables) to
+ground each community profile in real demographic data for their
+neighborhood and sector. The eight community stakeholders---a Pilsen
+renter, an Austin business owner, a Bronzeville homeowner, and
+others---are digital doubles across four geographic zones (South Side,
+West Side, North Side, Loop-adjacent). Same proposal, same personas
+yields reproducible evaluations; different proposals or modes let me
+explore how perspectives shift.
+
+\textbf{Persona Control and Ethics.} The distinct personalities and
+evaluation criteria of the committee members are theoretically supported
+by Chen et al.~(2025), who show that ``persona vectors'' can reliably
+control character traits and analytical focuses in LLMs. Finally,
+deploying such a system for urban policy requires careful consideration
+of AI agency. Consistent with Gabriel et al.~(2025), who call for a new
+ethics for a world of AI agents, this project emphasizes transparency:
+deliberation logs are fully traceable, and the final synthesis preserves
+both consensus and dissenting views, ensuring human oversight over the
+policy evaluation process.
+
+\subsection{How It Works}\label{how-it-works}
+
+I use a two-tier setup: Opus for document understanding (summarizes the
+proposal), Haiku for deliberation (cheaper, faster). Three modes:
+\emph{jury only (quick)} with four experts, \emph{jury only (full)} with
+seven, or \emph{full} with community stakeholders first, then the jury.
+
+Three rounds. Round 1: each jury member scores Impact, Fiscal
+Responsibility, Sustainability (1--10) plus six criteria
+(LOW/MEDIUM/HIGH). Round 2: they see each other's scores and respond in
+character---agreement, pushback, emphasis. Round 3: final scores,
+two-sentence verdicts, and a synthesis report.
+
+\textbf{Evaluation criteria.} The three main scores (Impact, Fiscal
+Responsibility, Sustainability) and the six sub-criteria come from the
+HPIC challenge's stated evaluation framework. The challenge asks whether
+proposals benefit a cross-section of Chicagoans (Impact), generate tax
+revenues and justify subsidies (Fiscal Responsibility), and support
+sustainable, adaptive design (Sustainability). I operationalized these
+into six criteria that jurors rate as LOW, MEDIUM, or HIGH:
+\textbf{Fiscal Impact} (revenue, debt, public cost), \textbf{Equity \&
+Access} (community benefit, affordability), \textbf{Political
+Feasibility} (legal, legislative, stakeholder support),
+\textbf{Sustainability} (long-term adaptability, risk), \textbf{Team
+Retention} (likelihood of keeping major league franchises), and
+\textbf{Accountability} (oversight, enforceability). These reflect the
+policy considerations the challenge highlighted---public funding,
+displacement, community engagement, and long-term fiscal
+responsibility---so the deliberation aligns with what the City of
+Chicago would evaluate.
+
+\subsection{What I Built}\label{what-i-built}
+
+Full pipeline (summarizer, jury rounds, community phase, synthesis),
+seven jury personas and eight community personas, a Streamlit app, CLI,
+and Docker. I also added an evaluation suite that validates outputs
+(score ranges, criteria, verdict consistency) and a demo notebook with
+alignment tests. Unit tests, integration test, and evaluation tests
+round it out.
+
+\subsection{Code Repository and Key
+Components}\label{code-repository-and-key-components}
+
+The project is organized as follows. Personas live in
+\texttt{agents/jury/} and \texttt{agents/community/} (markdown files).
+The orchestration logic is in \texttt{src/simulate.py}; agent invocation
+and prompt building in \texttt{src/agents.py}; persona loading in
+\texttt{src/personas.py}; criteria definitions in
+\texttt{src/criteria.py}; and output formatting in
+\texttt{src/output.py}. The evaluation suite is in
+\texttt{src/evaluation.py}. The Streamlit app is \texttt{app.py}.
+
+\textbf{Main simulation flow.} The \texttt{run()} function in
+\texttt{src/simulate.py} orchestrates the full pipeline: summarizer
+(Opus), optional community phase, then jury rounds 1--3 and synthesis.
+Each round writes outputs to the run directory.
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\CommentTok{\# src/simulate.py — main run() flow (simplified)}
+\KeywordTok{def}\NormalTok{ run(proposal\_text: }\BuiltInTok{str}\NormalTok{, mode: }\BuiltInTok{str} \OperatorTok{=} \StringTok{"jury"}\NormalTok{, output\_dir: Path }\OperatorTok{|} \VariableTok{None} \OperatorTok{=} \VariableTok{None}\NormalTok{) }\OperatorTok{{-}\textgreater{}}\NormalTok{ Path:}
+\NormalTok{    proposal\_summary }\OperatorTok{=}\NormalTok{ \_run\_summarizer(proposal\_text, out)}
+\NormalTok{    jury\_personas }\OperatorTok{=}\NormalTok{ load\_jury\_personas(quick}\OperatorTok{=}\NormalTok{(mode }\OperatorTok{==} \StringTok{"jury\_quick"}\NormalTok{))}
+\NormalTok{    community\_summary }\OperatorTok{=} \StringTok{""}
+    \ControlFlowTok{if}\NormalTok{ mode }\OperatorTok{==} \StringTok{"full"}\NormalTok{:}
+\NormalTok{        community\_personas }\OperatorTok{=}\NormalTok{ load\_community\_personas()}
+\NormalTok{        community\_summary, \_ }\OperatorTok{=}\NormalTok{ \_run\_community\_phase(proposal\_summary, community\_personas)}
+\NormalTok{    round1\_scores, log\_entries }\OperatorTok{=}\NormalTok{ \_run\_round1\_jury(}
+\NormalTok{        proposal\_summary, community\_summary, jury\_personas}
+\NormalTok{    )}
+\NormalTok{    log\_entries }\OperatorTok{=}\NormalTok{ \_run\_round2\_deliberation(jury\_personas, round1\_scores, log\_entries)}
+\NormalTok{    final\_scores, synthesis, log\_entries }\OperatorTok{=}\NormalTok{ \_run\_round3\_final(jury\_personas, log\_entries, round1\_scores)}
+    \CommentTok{\# ... write report.md, scores.json, deliberation\_log.md}
+\end{Highlighting}
+\end{Shaded}
+
+\textbf{How prompts and context get passed.} Each agent receives a
+\emph{system prompt} (persona + fixed criteria) and a \emph{user
+message} (the proposal + context for that round). The system prompt is
+built by concatenating the persona markdown with the evaluation
+criteria:
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\CommentTok{\# src/agents.py — system prompt from persona + criteria}
+\KeywordTok{def}\NormalTok{ build\_jury\_system\_prompt(persona\_content: }\BuiltInTok{str}\NormalTok{) }\OperatorTok{{-}\textgreater{}} \BuiltInTok{str}\NormalTok{:}
+    \ControlFlowTok{return} \SpecialStringTok{f"""You are an expert panelist evaluating a Chicago stadium/urban policy proposal. Stay in character.}
+
+\SpecialCharTok{\{}\NormalTok{persona\_content}\SpecialCharTok{\}}
+
+\SpecialStringTok{You are evaluating the proposal against Chicago\textquotesingle{}s stated criteria. }\SpecialCharTok{\{}\NormalTok{CRITERIA\_TEXT}\SpecialCharTok{\}}
+\SpecialCharTok{\{}\NormalTok{CRITERIA\_6\_TEXT}\SpecialCharTok{\}}
+
+\SpecialStringTok{Respond in character... When asked for scores, you must respond with only a single valid JSON object..."""}
+\end{Highlighting}
+\end{Shaded}
+
+\texttt{CRITERIA\_TEXT} injects the three main scores (Impact, Fiscal
+Responsibility, Sustainability) with 1--10 scale and guidance;
+\texttt{CRITERIA\_6\_TEXT} injects the six sub-criteria
+(LOW/MEDIUM/HIGH) with sub-definitions from \texttt{src/criteria.py}.
+
+\textbf{Round 1 user prompt.} The user message includes the proposal
+summary (or community summary in full mode) and instructions for JSON
+output. Each jury persona gets the same user message but a different
+system prompt (their persona):
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\CommentTok{\# src/simulate.py — Round 1 prompt construction}
+\NormalTok{prompt }\OperatorTok{=} \SpecialStringTok{f"""Below is a detailed summary of a Chicago stadium/urban policy proposal to evaluate. }\SpecialCharTok{\{}\NormalTok{intro}\SpecialCharTok{\}}
+
+\SpecialStringTok{Proposal summary:}
+\SpecialStringTok{{-}{-}{-}}
+\SpecialCharTok{\{}\NormalTok{proposal\_text[:}\DecValTok{120000}\NormalTok{]}\SpecialCharTok{\}}
+\SpecialStringTok{{-}{-}{-}}
+
+\SpecialCharTok{\{}\NormalTok{community\_block}\SpecialCharTok{\}}
+\SpecialStringTok{{-}{-}{-}}
+
+\SpecialStringTok{Score the proposal. You must respond with only a single JSON object...}
+\SpecialStringTok{"""}
+\CommentTok{\# For each persona:}
+\NormalTok{sys\_prompt }\OperatorTok{=}\NormalTok{ build\_jury\_system\_prompt(persona[}\StringTok{"content"}\NormalTok{])}
+\NormalTok{response }\OperatorTok{=}\NormalTok{ invoke\_agent(persona[}\StringTok{"id"}\NormalTok{], sys\_prompt, prompt, }\VariableTok{None}\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+\textbf{Agent invocation.} The \texttt{invoke\_agent} function sends the
+system prompt and messages to the Anthropic API. For Round 2 and 3,
+\texttt{conversation\_history} can include prior rounds so the agent
+sees the deliberation so far:
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\CommentTok{\# src/agents.py — API call}
+\KeywordTok{def}\NormalTok{ invoke\_agent(agent\_id, system\_prompt, user\_message, conversation\_history}\OperatorTok{=}\VariableTok{None}\NormalTok{, model}\OperatorTok{=}\VariableTok{None}\NormalTok{):}
+\NormalTok{    messages }\OperatorTok{=}\NormalTok{ []}
+    \ControlFlowTok{if}\NormalTok{ conversation\_history:}
+        \ControlFlowTok{for}\NormalTok{ m }\KeywordTok{in}\NormalTok{ conversation\_history:}
+\NormalTok{            messages.append(\{}\StringTok{"role"}\NormalTok{: m[}\StringTok{"role"}\NormalTok{], }\StringTok{"content"}\NormalTok{: m[}\StringTok{"content"}\NormalTok{]\})}
+\NormalTok{    messages.append(\{}\StringTok{"role"}\NormalTok{: }\StringTok{"user"}\NormalTok{, }\StringTok{"content"}\NormalTok{: user\_message\})}
+\NormalTok{    response }\OperatorTok{=}\NormalTok{ client.messages.create(}
+\NormalTok{        model}\OperatorTok{=}\NormalTok{model }\KeywordTok{or}\NormalTok{ DELIBERATION\_MODEL,}
+\NormalTok{        max\_tokens}\OperatorTok{=}\DecValTok{4096}\NormalTok{,}
+\NormalTok{        system}\OperatorTok{=}\NormalTok{system\_prompt,}
+\NormalTok{        messages}\OperatorTok{=}\NormalTok{messages,}
+\NormalTok{    )}
+    \ControlFlowTok{return}\NormalTok{ response.content[}\DecValTok{0}\NormalTok{].text}
+\end{Highlighting}
+\end{Shaded}
+
+So the flow is: persona content becomes the system prompt; the proposal
+summary plus round-specific context becomes the user message; prior
+rounds (when applicable) are passed as conversation\_history. The API
+returns the agent's text, which is parsed for JSON scores and criteria.
+
+\subsection{Verification}\label{verification}
+
+The evaluation suite
+(\texttt{uv\ run\ python\ -m\ src.evaluation\ -\/-run-dir\ outputs/\textless{}run\_id\textgreater{}})
+checks that scores are valid, criteria are LOW/MEDIUM/HIGH, and verdicts
+align with scores. Similar in spirit to the portfolio homework's
+backtesting---I validate that the pipeline produces sensible, consistent
+outputs.
+
+\textbf{HPIC Demo Notebook.} I included
+\texttt{docs/notebooks/hpic\_demo.ipynb} to showcase the
+concept---allowing readers and the professor to explore the project
+without running the full app. The notebook walks through: (1)
+introduction and main components (summarization, deliberation, personas,
+outputs); (2) simulation flow and the four quick jury profiles; (3) a
+sample run with embedded data or loaded outputs from prior runs; (4)
+visualizations (bar chart of scores by agent, criteria heatmap); (5)
+alignment tests (persona differentiation, lens alignment---e.g., does
+Sarah Chen weight fiscal highly? does Marcus Thompson weight impact and
+equity\_access highly?); and (6) integration with the evaluation suite.
+It works with or without prior runs thanks to embedded sample data, so
+the concept is reproducible even when \texttt{outputs/} is empty.
+
+\subsection{Effort}\label{effort}
+
+I have been working on this project for the last couple of
+months---investigating the literature on AI agents and digital doubles,
+reading papers from the AI Agents for Social Science course, and trying
+different combinations of models, prompts, and persona designs. The work
+spans the full pipeline (summarization with Opus, deliberation with
+Haiku), seven jury personas and eight community stakeholders grounded in
+ACS 2022 data, the Streamlit app and CLI, Docker deployment, the
+evaluation suite, and the demo notebook. I estimate roughly 50--70 hours
+total: research and design (\textasciitilde15 h), persona development
+and ACS data integration (\textasciitilde12 h), pipeline implementation
+and debugging (\textasciitilde15 h), UI and deployment (\textasciitilde8
+h), evaluation suite and documentation (\textasciitilde10 h). The HPIC
+challenge on March 7th was a milestone; the Advanced ML final project
+additions (evaluation suite, demo notebook, report) came afterward.
+
+\subsection{Limitations}\label{limitations}
+
+No formal hallucination detection yet. Persona differentiation is
+heuristic. The verdict consistency check uses a fixed set of phrases.
+Future work: claim extraction and grounding against the proposal, better
+metrics for persona differentiation.
+
+\subsection{Conclusion}\label{conclusion}
+
+The HPIC AI-Augmented Deliberative Committee is an application of
+multi-agent systems to policy deliberation. Digital doubles + societies
+of thought = a way to surface diverse perspectives when you can't get
+2.7 million people in a room. The project is on GitHub with full docs, a
+demo notebook, and an evaluation suite. Feel free to run it, fork it, or
+just explore the live app.
+
+\textbf{Links:}
+\href{https://ai-augmetnted-deliberative-committee-hpic.streamlit.app}{Streamlit
+Dashboard} ·
+\href{https://github.com/anfelipecb/AI-Augmetnted-Deliberative-Committee}{GitHub}
+
+\subsection{Annex: Example Community Stakeholder
+Profile}\label{annex-example-community-stakeholder-profile}
+
+Below is one of the eight community stakeholder profiles (digital
+doubles) used in full mode. Each profile is sampled from ACS 2022 tables
+(e.g., B19013 income, B25064 rent, B25077 home values, B08303 commute)
+and stored as a markdown file; the system prompt is built from this
+content plus fixed criteria. This example---Rosa Delgado, a Pilsen
+renter---illustrates the structure: personal profile, location and
+housing, economic profile, community context, and stakeholder
+perspective, with methodology notes citing the source tables.
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{\# Rosa Delgado}
+
+\FunctionTok{\#\# Personal Profile}
+\SpecialStringTok{{-} }\NormalTok{Age: 34}
+\SpecialStringTok{{-} }\NormalTok{Household composition: Married, 3 children (ages 12, 9, 6)}
+\SpecialStringTok{{-} }\NormalTok{Years in Chicago/neighborhood: 16 years (grew up in Little Village, moved to Pilsen at 18)}
+\SpecialStringTok{{-} }\NormalTok{Primary language: Spanish (limited English proficiency)}
+
+\FunctionTok{\#\# Location \& Housing}
+\SpecialStringTok{{-} }\NormalTok{Neighborhood: East Pilsen, near 18th \& Morgan}
+\SpecialStringTok{{-} }\NormalTok{Housing tenure: Renter}
+\SpecialStringTok{{-} }\NormalTok{Monthly rent: $1,350 (up from $950 three years ago)}
+
+\FunctionTok{\#\# Economic Profile}
+\SpecialStringTok{{-} }\NormalTok{Occupation: Restaurant server at downtown hotel}
+\SpecialStringTok{{-} }\NormalTok{Annual household income: $47,800 (combined with husband\textquotesingle{}s construction work)}
+\SpecialStringTok{{-} }\NormalTok{Education: High school diploma}
+\SpecialStringTok{{-} }\NormalTok{Commute: 35{-}40 minutes via Pink Line to Loop}
+
+\FunctionTok{\#\# Community Context}
+\SpecialStringTok{{-} }\NormalTok{Neighborhood ties: Shops at Supermercado Monterrey on 18th St, children attend Benito Juárez Community Academy}
+\SpecialStringTok{{-} }\NormalTok{Community involvement: Attends community meetings through church (St. Adalbert)}
+
+\FunctionTok{\#\# Stakeholder Perspective}
+\SpecialStringTok{{-} }\NormalTok{Primary concerns: Rent increases and displacement; transit reliability; affordable family activities; access to information in Spanish}
+\SpecialStringTok{{-} }\NormalTok{Priorities: Affordable housing protections; living{-}wage jobs accessible by transit; family{-}friendly public spaces}
+\SpecialStringTok{{-} }\NormalTok{Perspective on development: Skeptical of development without renter protections; worries about gentrification; needs concrete affordability guarantees}
+
+\NormalTok{*Methodology: Income and rent from ACS 2022 Tables B19013, B25064 (Community Area 31 {-} Lower West Side/Pilsen)*}
+\end{Highlighting}
+\end{Shaded}
+
+\subsection{References}\label{references}
+
+All references were checked and browsed to verify titles, authors, and
+URLs before inclusion, to prevent hallucinations.
+
+\begin{itemize}
+\tightlist
+\item
+  Kim, J., Lai, S., Scherrer, N., Agüera y Arcas, B., \& Evans, J.
+  (2026). Reasoning Models Generate Societies of Thought.
+  arXiv:2601.10825. https://arxiv.org/html/2601.10825v1
+\item
+  Broska et al.~(2025). The Mixed Subjects Design: Treating Large
+  Language Models as Potentially Informative Observations.
+\item
+  Chen et al.~(2025). Persona Vectors: Monitoring and Controlling
+  Character Traits in Language Models.
+\item
+  Lai et al.~(2025). Biased AI improves human decision-making but
+  reduces trust.
+\item
+  Gabriel et al.~(2025). We need a new ethics for a world of AI agents.
+\item
+  U.S. Census Bureau. American Community Survey 2022 5-year estimates.
+  https://data.census.gov
+\item
+  City of Chicago Data Portal. https://data.cityofchicago.org
+\item
+  Anthropic API. https://docs.anthropic.com
+\end{itemize}
+
+\end{document}
