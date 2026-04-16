@@ -2,6 +2,8 @@
 
 Evaluate Chicago stadium and urban policy proposals using an AI panel of expert and community perspectives.
 
+You can find the app deployed here: [AI-Augmented Committee](https://ai-augmetnted-deliberative-committee-hpic.streamlit.app/)
+
 ## Demo
 
 The app lets you upload or select a proposal, choose a deliberation mode (jury-only or full with community), and run rounds step-by-step or all at once. Below is a short walkthrough.
